@@ -1,19 +1,22 @@
-from llama_parse import LlamaParse
-import os.path
 import logging
-import chromadb  
+import os.path
 import sys
+
+import chromadb
 import click
 from llama_index.core import (
-    VectorStoreIndex,
     SimpleDirectoryReader,
     StorageContext,
+    VectorStoreIndex,
     load_index_from_storage,
 )
+from llama_parse import LlamaParse
+
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 PERSIST_DIR = "./storage"
+
 
 def init_store(data_path: str, storage_path: str):
     # check if storage already exists
@@ -26,17 +29,18 @@ def init_store(data_path: str, storage_path: str):
         # load the existing index
         storage_context = StorageContext.from_defaults(persist_dir=storage_path)
         index = load_index_from_storage(storage_context)
-    
-    return index 
+
+    return index
 
 
 @click.command()
-@click.option('--question', prompt='Your question', required=True)
-def ask_question(question: str)-> None:
+@click.option("--question", prompt="Your question", required=True)
+def ask_question(question: str) -> None:
     index = init_store("./data", PERSIST_DIR)
     query_engine = index.as_query_engine()
     response = query_engine.query(question)
     print(response)
+
 
 if __name__ == "__main__":
     ask_question()
@@ -44,7 +48,7 @@ if __name__ == "__main__":
     #     documents = SimpleDirectoryReader("data").load_data()
     #     index = VectorStoreIndex.from_documents(documents)
     #     # store it for later
-    #     # don't have to ask openai for embeddings each rqt now 
+    #     # don't have to ask openai for embeddings each rqt now
     #     index.storage_context.persist(persist_dir=PERSIST_DIR)
     # else:
     #     storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
@@ -61,4 +65,3 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     main()
-    
