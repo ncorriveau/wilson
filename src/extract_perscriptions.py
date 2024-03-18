@@ -1,10 +1,10 @@
 import logging
 import sys
-
-from pydantic import BaseModel
 from typing import List
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.llms.openai import OpenAI
+from pydantic import BaseModel
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
