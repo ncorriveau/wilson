@@ -9,11 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-EXTRACT_PERSCRIPTIONS_PROMPT = (
-    """Generate a list of current medications the patient is taking."""
-)
-# LLM = OpenAI(model="gpt-3.5-turbo", temperature=0.1)
-
 
 class Drug(BaseModel):
     """A model to represent a given drug perscription."""
@@ -53,6 +48,24 @@ class Perscriptions(BaseModel):
     )
 
 
+class AppointmentMeta(BaseModel):
+    """A model to represent the metadata about the particular appointment."""
+
+    dr_name: str = Field(..., description="""The name of the doctor""")
+    date: str = Field(
+        ..., description="""The date of the appointment, in YYYY-MM-DD format"""
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            {
+                "dr_name": "Dr. Oz",
+                "date": "2023-10-10",
+            },
+        }
+    )
+
+
 SYSTEM_MESSAGE = f"""You are an expert AI assistant for medical practitioners. You will assist in analyzing 
 medical records and returning a list of current medications the patient is taking in a valid JSON format. You just return 
 valid JSON objects that contain the technical name, brand name, and instructions for each drug found that follows
@@ -78,7 +91,7 @@ def extract_perscriptions(client: OpenAI, note: str) -> Perscriptions:
             {"role": "user", "content": USER_MESSAGE.format(note)},
             {"role": "assistant", "content": ASSISTANT_MESSAGE},
         ],
-        # response_format="json_object",
+        response_format="json_object",
     )
     return Perscriptions.model_validate_json(response.choices[0].message.content)
 
