@@ -4,7 +4,7 @@ from typing import List
 
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.llms.openai import OpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -18,11 +18,12 @@ LLM = OpenAI(model="gpt-3.5-turbo", temperature=0.1)
 class Drug(BaseModel):
     """A model to represent a given drug perscription. Technical name represents
     the name of the chemical compound, brand name represents the commercial
-    name of the drug, and dosage represents the amount of the drug to be taken."""
+    name of the drug, and instructions represents additional notes about the drugs usage.
+    """
 
     technical_name: str
     brand_name: str
-    dosage: str
+    instructions: str
 
 
 class Perscriptions(BaseModel):
@@ -45,4 +46,13 @@ if __name__ == "__main__":
         document,
     )
     response = extract_perscriptions(index, LLM)
-    print(response)
+    TRUE_NAMES = {"flonase", "nexium", "naprosyn", "astelin", "desyrel"}
+    TEST_NAMES = set()
+
+    for drug in response.drugs:
+        print(f"Checking {drug.brand_name.lower()}")
+        assert drug.brand_name.lower() in TRUE_NAMES
+        TEST_NAMES.add(drug.brand_name.lower())
+
+    assert TEST_NAMES == TRUE_NAMES
+    print("All tests passed!")
