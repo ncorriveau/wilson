@@ -10,16 +10,31 @@ from pydantic import BaseModel, ConfigDict, Field
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-PERSCRIPTION_SYS_MSG = """You will assist in analyzing medical records and returning a list of current medications the patient is taking in a valid JSON format. You just return 
+PERSCRIPTION_SYS_MSG = """You will assist in analyzing medical records and returning a list of 
+current medications the patient is taking in a valid JSON format. You just return 
 valid JSON objects that contain the technical name, brand name, and instructions for each drug found."""
 
-PERSCRIPTION_USER_MSG = """Extract the perscribed medications from the doctor note below and return a list of current medications the patient is taking in a valid JSON format. 
+PERSCRIPTION_USER_MSG = """Extract the perscribed medications from the doctor note below and return a 
+list of current medications the patient is taking in a valid JSON format. 
 Doctor Note: 
 {}"""
 
-METADATA_SYS_MSG = """return metadata about the particular appointment in a valid JSON format. The JSON objects must contain the doctor's name and the date of the appointment. If you are unsure, please respond with an empty string for each category"""
+METADATA_SYS_MSG = """return metadata about the particular appointment in a valid JSON format. 
+The JSON objects must contain the doctor's name and the date of the appointment. 
+If you are unsure, please respond with an empty string for each category"""
 
-METADATA_USER_MSG = """Extract the doctor's name and the date of the appointment from the doctors note below and return the information in valid JSON format.
+METADATA_USER_MSG = """Extract the doctor's name and the date of the appointment 
+from the doctors note below and return the information in valid JSON format.
+Doctor Note:
+{}"""
+
+FOLLOWUP_SYS_MSG = """return follow up appointments, referal appointments, and tests from the appointment in a valid JSON format.
+Examples include scheduling to see a specialist, following up with the current doctor in 3 months, or get a certain type of test. 
+Please do not include taking medications. 
+If there are referral appointments with specialist, please ensure each type of appointment is separated into a separate task. 
+If you are unsure, please respond with an empty string"""
+
+FOLLOWUP_USER_MSG = """Extract the follw up tasks from the doctors note below and return the information in valid JSON format.
 Doctor Note:
 {}"""
 
@@ -28,8 +43,10 @@ def build_system_msg(msg: str, schema: dict[str]) -> str:
     """helper function to build system messages. The msg should contain more specific instructions about the task,
     while the schema should match what you want your response JSON schema to look like
     """
-    return f"""You are an expert AI assistant for medical practitioners. You will assist in analyzing medical records, extracting information, and returning the information in valid JSON format. Specifically, please complete the following:
-            {msg}. Follow the JSON schema provided below to ensure the information is returned in the correct format.
+    return f"""You are an expert AI assistant for medical practitioners. 
+            You will assist in analyzing medical records, extracting information, and returning the information in valid JSON format. 
+            Specifically, please complete the following: {msg}. 
+            Follow the JSON schema provided below to ensure the information is returned in the correct format.
             JSON Schema: 
             {schema}"""
 
@@ -54,6 +71,29 @@ class Drug(BaseModel):
     instructions: str = Field(
         ...,
         description="""Instructions represents additional notes about the drugs usage""",
+    )
+
+
+class FollowUp(BaseModel):
+    """A model to represent the follow up tasks prescribed by the doctor."""
+
+    task: str = Field(
+        ...,
+        description="""A referral appointment or test prescribed by the doctor. For example, 'Schedule an appointment with a ENT specialist.'""",
+    )
+
+
+class FollowUps(BaseModel):
+    """A model to represent the follow up tasks prescribed by the doctor."""
+
+    tasks: List[FollowUp]
+    model_config = ConfigDict(
+        json_schema_extra={
+            "tasks": [
+                {"task": "Schedule an appointment with a ENT specialist."},
+                {"task": "Get a blood test for cholesterol."},
+            ]
+        }
     )
 
 
@@ -118,10 +158,10 @@ if __name__ == "__main__":
     client = OpenAI()
     document = SimpleDirectoryReader("data").load_data()
     messages = Messages(
-        system=build_system_msg(METADATA_SYS_MSG, AppointmentMeta.model_json_schema()),
-        user=METADATA_USER_MSG.format(document),
+        system=build_system_msg(FOLLOWUP_SYS_MSG, FollowUps.model_json_schema()),
+        user=FOLLOWUP_USER_MSG.format(document),
     )
-    response = extract_info(client, messages, AppointmentMeta)
+    response = extract_info(client, messages, FollowUps)
     print(response)
     # schema = Perscriptions.model_json_schema()
     # response = extract_perscriptions(client, document)
