@@ -38,6 +38,13 @@ FOLLOWUP_USER_MSG = """Extract the follw up tasks from the doctors note below an
 Doctor Note:
 {}"""
 
+SUMMARY_SYS_MSG = """return a summary of the doctor's note in a valid JSON format. 
+Please keep the summary to under three sentences at the most."""
+SUMMARY_USER_MSG = """Summarize the doctors note below and return the information in valid JSON format. 
+Please keep the summary under three sentences. Keep in mind, you are summarizing for me (the patient), thus 
+do not need to include my name and age in the summary.
+Doctor Note: {}"""
+
 
 def build_system_msg(msg: str, schema: dict[str]) -> str:
     """helper function to build system messages. The msg should contain more specific instructions about the task,
@@ -74,6 +81,28 @@ class Drug(BaseModel):
     )
 
 
+class Perscriptions(BaseModel):
+    """A model to represent the perscriptions extracted from a given document."""
+
+    drugs: List[Drug]
+    model_config = ConfigDict(
+        json_schema_extra={
+            "drugs": [
+                {
+                    "technical_name": "Fluticasone",
+                    "brand_name": "Flonase",
+                    "instructions": "Take one spray in each nostril once daily.",
+                },
+                {
+                    "technical_name": "Augmentin",
+                    "brand_name": "amoxicillin",
+                    "instructions": "Take a 500-mg tablet twice daily",
+                },
+            ]
+        }
+    )
+
+
 class FollowUp(BaseModel):
     """A model to represent the follow up tasks prescribed by the doctor."""
 
@@ -97,25 +126,12 @@ class FollowUps(BaseModel):
     )
 
 
-class Perscriptions(BaseModel):
-    """A model to represent the perscriptions extracted from a given document."""
+class Summary(BaseModel):
+    """A model to represent the summary of the doctor's note."""
 
-    drugs: List[Drug]
-    model_config = ConfigDict(
-        json_schema_extra={
-            "drugs": [
-                {
-                    "technical_name": "Fluticasone",
-                    "brand_name": "Flonase",
-                    "instructions": "Take one spray in each nostril once daily.",
-                },
-                {
-                    "technical_name": "Augmentin",
-                    "brand_name": "amoxicillin",
-                    "instructions": "Take a 500-mg tablet twice daily",
-                },
-            ]
-        }
+    summary: str = Field(
+        ...,
+        description="""A summary of the doctor's note, including the patient's condition and the doctor's recommendations""",
     )
 
 
@@ -158,10 +174,10 @@ if __name__ == "__main__":
     client = OpenAI()
     document = SimpleDirectoryReader("data").load_data()
     messages = Messages(
-        system=build_system_msg(FOLLOWUP_SYS_MSG, FollowUps.model_json_schema()),
-        user=FOLLOWUP_USER_MSG.format(document),
+        system=build_system_msg(SUMMARY_SYS_MSG, Summary.model_json_schema()),
+        user=SUMMARY_USER_MSG.format(document),
     )
-    response = extract_info(client, messages, FollowUps)
+    response = extract_info(client, messages, Summary)
     print(response)
     # schema = Perscriptions.model_json_schema()
     # response = extract_perscriptions(client, document)
