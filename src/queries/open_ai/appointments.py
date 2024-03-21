@@ -63,9 +63,37 @@ def extract_perscriptions(context: str) -> OAIRequest:
     )
 
 
+def extract_followups(context: str) -> OAIRequest:
+    """Extracts the follow up tasks from a given document."""
+    system_msg = oai_prompts.build_system_msg(
+        oai_prompts.FOLLOWUP_SYS_MSG, appointment.FollowUps.model_json_schema()
+    )
+    user_msg = oai_prompts.FOLLOWUP_USER_MSG.format(context)
+    response_schema = appointment.FollowUps
+    return OAIRequest(
+        system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+    )
+
+
+def extract_summary(context: str) -> OAIRequest:
+    """Extracts the summary from a given document."""
+    system_msg = oai_prompts.build_system_msg(
+        oai_prompts.SUMMARY_SYS_MSG, appointment.Summary.model_json_schema()
+    )
+    user_msg = oai_prompts.SUMMARY_USER_MSG.format(context)
+    response_schema = appointment.Summary
+    return OAIRequest(
+        system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+    )
+
+
 if __name__ == "__main__":
     client = OpenAI()
     context = SimpleDirectoryReader("data").load_data()
-    request = extract_perscriptions(context)
-    response = send_rqt(client, request)
-    print(response)
+    rqt_perscript = extract_perscriptions(context)
+    rqt_followups = extract_followups(context)
+    rqt_summary = extract_summary(context)
+    rqts = [rqt_perscript, rqt_followups, rqt_summary]
+    for rqt in rqts:
+        response = send_rqt(client, rqt)
+        print(response)
