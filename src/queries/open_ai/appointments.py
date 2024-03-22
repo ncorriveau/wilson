@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 from typing import Type
 
 from llama_index.core import SimpleDirectoryReader
@@ -51,49 +52,88 @@ def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
     return rqt.response_schema.model_validate_json(response.choices[0].message.content)
 
 
-def extract_perscriptions(context: str) -> OAIRequest:
-    """Extracts the perscriptions from a given document."""
-    system_msg = oai_prompts.build_system_msg(
-        oai_prompts.PERSCRIPTION_SYS_MSG, appointment.Perscriptions.model_json_schema()
-    )
-    user_msg = oai_prompts.PERSCRIPTION_USER_MSG.format(context)
-    response_schema = appointment.Perscriptions
-    return OAIRequest(
-        system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
-    )
+class AppointmentAnalysis:
 
+    def __init__(self, client: OpenAI, context: str):
+        self._client = client
+        self.context = context
 
-def extract_followups(context: str) -> OAIRequest:
-    """Extracts the follow up tasks from a given document."""
-    system_msg = oai_prompts.build_system_msg(
-        oai_prompts.FOLLOWUP_SYS_MSG, appointment.FollowUps.model_json_schema()
-    )
-    user_msg = oai_prompts.FOLLOWUP_USER_MSG.format(context)
-    response_schema = appointment.FollowUps
-    return OAIRequest(
-        system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
-    )
+    @property
+    def perscriptions_rqt(self) -> OAIRequest:
+        """Extracts the perscriptions from a given document."""
+        system_msg = oai_prompts.build_system_msg(
+            oai_prompts.PERSCRIPTION_SYS_MSG,
+            appointment.Perscriptions.model_json_schema(),
+        )
+        user_msg = oai_prompts.PERSCRIPTION_USER_MSG.format(self.context)
+        response_schema = appointment.Perscriptions
+        return OAIRequest(
+            system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+        )
 
+    @property
+    def metadata_rqt(self) -> OAIRequest:
+        """Extracts the metadata from a given document."""
+        system_msg = oai_prompts.build_system_msg(
+            oai_prompts.METADATA_SYS_MSG,
+            appointment.AppointmentMeta.model_json_schema(),
+        )
+        user_msg = oai_prompts.METADATA_USER_MSG.format(self.context)
+        response_schema = appointment.AppointmentMeta
+        return OAIRequest(
+            system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+        )
 
-def extract_summary(context: str) -> OAIRequest:
-    """Extracts the summary from a given document."""
-    system_msg = oai_prompts.build_system_msg(
-        oai_prompts.SUMMARY_SYS_MSG, appointment.Summary.model_json_schema()
-    )
-    user_msg = oai_prompts.SUMMARY_USER_MSG.format(context)
-    response_schema = appointment.Summary
-    return OAIRequest(
-        system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
-    )
+    @property
+    def followups_rqt(self) -> OAIRequest:
+        """Extracts the follow up tasks from a given document."""
+        system_msg = oai_prompts.build_system_msg(
+            oai_prompts.FOLLOWUP_SYS_MSG, appointment.FollowUps.model_json_schema()
+        )
+        user_msg = oai_prompts.FOLLOWUP_USER_MSG.format(self.context)
+        response_schema = appointment.FollowUps
+        return OAIRequest(
+            system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+        )
+
+    @property
+    def summary_rqt(self) -> OAIRequest:
+        """Extracts the summary from a given document."""
+        system_msg = oai_prompts.build_system_msg(
+            oai_prompts.SUMMARY_SYS_MSG, appointment.Summary.model_json_schema()
+        )
+        user_msg = oai_prompts.SUMMARY_USER_MSG.format(self.context)
+        response_schema = appointment.Summary
+        return OAIRequest(
+            system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
+        )
+
+    def get_info(self) -> dict[str, Type[BaseModel]]:
+        """Extracts information from a given document using the OpenAI API."""
+        rqts = [
+            self.perscriptions_rqt,
+            self.metadata_rqt,
+            self.followups_rqt,
+            self.summary_rqt,
+        ]
+        responses = {}
+        for rqt in rqts:
+            logging.info(f"Sending rqt for {rqt.response_schema.__name__}")
+            response = send_rqt(self._client, rqt)
+            responses[rqt.response_schema.__name__] = response
+
+        return responses
 
 
 if __name__ == "__main__":
     client = OpenAI()
     context = SimpleDirectoryReader("data").load_data()
-    rqt_perscript = extract_perscriptions(context)
-    rqt_followups = extract_followups(context)
-    rqt_summary = extract_summary(context)
-    rqts = [rqt_perscript, rqt_followups, rqt_summary]
-    for rqt in rqts:
-        response = send_rqt(client, rqt)
-        print(response)
+    appt = AppointmentAnalysis(client, context)
+
+    logging.info("Starting timer")
+    start_time = time.time()
+    info = appt.get_info()
+    logging.info(f"Time taken for analysis: {time.time() - start_time}")
+
+    for key, value in info.items():
+        logging.info(f"{key}: {value}")
