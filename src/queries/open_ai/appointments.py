@@ -4,7 +4,7 @@ import time
 from typing import Type
 
 from llama_index.core import SimpleDirectoryReader
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
 import data_models.appointment_summary as appointment
@@ -35,9 +35,9 @@ class OAIRequest(BaseModel):
     response_format: dict = Field(default={"type": "json_object"})
 
 
-def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
+async def send_rqt(client: OpenAI | AsyncOpenAI, rqt: OAIRequest) -> Type[BaseModel]:
     """Extracts information from a given document using the OpenAI API."""
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=rqt.model,
         max_tokens=rqt.max_tokens,
         temperature=rqt.temperature,
@@ -54,7 +54,7 @@ def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
 
 class AppointmentAnalysis:
 
-    def __init__(self, client: OpenAI, context: str):
+    def __init__(self, client: OpenAI | AsyncOpenAI, context: str):
         self._client = client
         self.context = context
 
@@ -109,7 +109,7 @@ class AppointmentAnalysis:
         )
 
     # todo - make these calls async or at least threaded
-    def get_info(self) -> dict[str, Type[BaseModel]]:
+    async def get_info(self) -> dict[str, Type[BaseModel]]:
         """Extracts information from a given document using the OpenAI API."""
         rqts = [
             self.perscriptions_rqt,
@@ -120,7 +120,7 @@ class AppointmentAnalysis:
         responses = {}
         for rqt in rqts:
             logging.debug(f"Sending rqt for {rqt.response_schema.__name__}")
-            response = send_rqt(self._client, rqt)
+            response = await send_rqt(self._client, rqt)
             responses[rqt.response_schema.__name__] = response
 
         return responses

@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from llama_index.core import SimpleDirectoryReader
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from queries.open_ai.appointments import AppointmentAnalysis
 
-client = OpenAI()
+client = AsyncOpenAI()
 
 app = FastAPI(
     title="Wilson AI API",
@@ -20,11 +20,11 @@ class ApptRqt(BaseModel):
 
 
 @app.post("/api/analyze_appointment/")
-def analyze_appointment(appt_rqt: ApptRqt):
+async def analyze_appointment(appt_rqt: ApptRqt):
     if not appt_rqt.data_location:
         return {"error": "No data provided"}
 
     context = SimpleDirectoryReader("../data").load_data()
     appt = AppointmentAnalysis(client, context)
-    info = appt.get_info()
+    info = await appt.get_info()
     return info
