@@ -7,8 +7,8 @@ from llama_index.core import SimpleDirectoryReader
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-import src.data_models.appointment_summary as appointment
-from src.prompts import open_ai as oai_prompts
+import data_models.appointment_summary as appointment
+from prompts import open_ai as oai_prompts
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -31,7 +31,7 @@ class OAIRequest(BaseModel):
     user_msg: str = Field(default="")
     assistant_msg: str = Field(default="```json")
 
-    # optional parameters
+    # optional parameters - only available for recent models
     response_format: dict = Field(default={"type": "json_object"})
 
 
@@ -108,6 +108,7 @@ class AppointmentAnalysis:
             system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
         )
 
+    # todo - make these calls async or at least threaded
     def get_info(self) -> dict[str, Type[BaseModel]]:
         """Extracts information from a given document using the OpenAI API."""
         rqts = [
@@ -118,7 +119,7 @@ class AppointmentAnalysis:
         ]
         responses = {}
         for rqt in rqts:
-            logging.info(f"Sending rqt for {rqt.response_schema.__name__}")
+            logging.debug(f"Sending rqt for {rqt.response_schema.__name__}")
             response = send_rqt(self._client, rqt)
             responses[rqt.response_schema.__name__] = response
 
@@ -127,13 +128,14 @@ class AppointmentAnalysis:
 
 if __name__ == "__main__":
     client = OpenAI()
-    context = SimpleDirectoryReader("data").load_data()
+    context = SimpleDirectoryReader("../data").load_data()
     appt = AppointmentAnalysis(client, context)
 
     logging.info("Starting timer")
     start_time = time.time()
     info = appt.get_info()
+    print(f"Returning type: {type(info)}")
     logging.info(f"Time taken for analysis: {time.time() - start_time}")
 
-    for key, value in info.items():
-        logging.info(f"{key}: {value}")
+    # for key, value in info.items():
+    #     logging.info(f"{key}: {value}")
