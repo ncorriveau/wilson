@@ -108,7 +108,6 @@ class AppointmentAnalysis:
             system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
         )
 
-    # todo - make these calls async or at least threaded
     async def get_info(self) -> dict[str, Type[BaseModel]]:
         """Extracts information from a given document using the OpenAI API."""
         rqts = [

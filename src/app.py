@@ -3,6 +3,7 @@ from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from db import CREATE_TABLE_QUERY, create_connection, create_table, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
 
 client = AsyncOpenAI()
@@ -24,7 +25,24 @@ async def analyze_appointment(appt_rqt: ApptRqt):
     if not appt_rqt.data_location:
         return {"error": "No data provided"}
 
-    context = SimpleDirectoryReader("../data").load_data()
+    context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     appt = AppointmentAnalysis(client, context)
     info = await appt.get_info()
+
+    params = {
+        "filename": appt_rqt.data_location,
+        "summary": info.get("Summary", {}).summary,
+        "provider_name": info.get(
+            "AppointmentMeta", {}
+        ).dr_name,  # need to update this to provider name
+        "appointment_date": info.get("AppointmentMeta", {}).date,
+        "follow_ups": info.get("FollowUps", {}).model_dump_json(),
+        "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
+    }
+
+    print(params)
+    print(type(params["follow_ups"]))
+    # conn = create_connection()
+    # create_table(conn, CREATE_TABLE_QUERY)
+
     return info
