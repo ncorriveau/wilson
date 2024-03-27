@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS appointment (
 );"""
 
 INSERT_APPOINTMENT_QUERY = """
-INSERT INTO appointment (filename, summary, provider_name, appointment_date, follow_ups, perscriptions)
-VALUES (%s, %s, %s, %s, %s, %s)
+INSERT INTO appointment (filename, user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
 """
 
 CREATE_USER_QUERY = """
