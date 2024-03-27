@@ -34,15 +34,15 @@ async def analyze_appointment(appt_rqt: ApptRqt):
         "summary": info.get("Summary", {}).summary,
         "provider_name": info.get(
             "AppointmentMeta", {}
-        ).dr_name,  # need to update this to provider name
+        ).dr_name,  # TODO: update this to provider name
         "appointment_date": info.get("AppointmentMeta", {}).date,
         "follow_ups": info.get("FollowUps", {}).model_dump_json(),
         "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
     }
 
-    print(params)
-    print(type(params["follow_ups"]))
-    # conn = create_connection()
-    # create_table(conn, CREATE_TABLE_QUERY)
+    conn = create_connection()
+    insert_appointment(conn, params)
+    print(f"Inserted Succesfully")
+    print(f"Returning type: {type(info)}")
 
     return info
