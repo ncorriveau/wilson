@@ -6,7 +6,7 @@ import psycopg2
 
 password = os.getenv("POSTGRES_PASSWORD")
 
-CREATE_TABLE_QUERY = """
+CREATE_APPT_TABLE_QUERY = """
 CREATE TABLE IF NOT EXISTS appointment (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -19,9 +19,30 @@ CREATE TABLE IF NOT EXISTS appointment (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );"""
 
+CREATE_COVERAGE_TYPE_QUERY = """
+CREATE TABLE IF NOT EXISTS coverage_type (
+    id SERIAL PRIMARY KEY,
+    type TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
+CREATE_INSURANCE_QUERY = """
+CREATE TABLE IF NOT EXISTS insurance (
+    id SERIAL PRIMARY KEY,
+    company_name TEXT NOT NULL,
+    insurance_name TEXT NOT NULL,
+    policy_number TEXT NOT NULL,
+    coverage_type_id INT NOT NULL REFERENCES coverage_type(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
 INSERT_APPOINTMENT_QUERY = """
-INSERT INTO appointment (filename, user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
 """
 
 CREATE_USER_QUERY = """
@@ -72,17 +93,6 @@ INSERT INTO perscriptions (brand_name, technical_name)
 VALUES (%s, %s)
 """
 
-CREATE_INSURANCE_QUERY = """
-CREATE TABLE IF NOT EXISTS insurance (
-    id SERIAL PRIMARY KEY,
-    company_name TEXT NOT NULL,
-    insurance_name TEXT NOT NULL,
-    policy_number TEXT NOT NULL,
-    coverage_type_id INT NOT NULL REFERENCES coverage_type(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-"""
-
 CREATE_PROVIDER_TO_INSURANCE_QUERY = """
 CREATE TABLE IF NOT EXISTS provider_to_insurance (
     id SERIAL PRIMARY KEY,
@@ -121,8 +131,10 @@ def create_connection():
 def create_table(conn, create_queries: List[str]) -> None:
     cursor = conn.cursor()
     for query in create_queries:
+        print(f"executing query: {query}")
         cursor.execute(query)
-    conn.commit()
+        print(f"Query executed")
+        conn.commit()
     cursor.close()
 
 
@@ -132,9 +144,10 @@ def insert_appointment(conn, params: Dict[str, str]) -> None:
         cursor.execute(
             INSERT_APPOINTMENT_QUERY,
             (
+                params.get("user_id"),
+                params.get("provider_id"),
                 params.get("filename"),
                 params.get("summary"),
-                params.get("provider_name"),
                 params.get("appointment_date"),
                 params.get("follow_ups"),
                 params.get("perscriptions"),
@@ -143,8 +156,9 @@ def insert_appointment(conn, params: Dict[str, str]) -> None:
         conn.commit()
 
     except Exception as e:
-        print(e)
+        print(f"Error while inserting data into appointment table {e}")
         conn.rollback()
+        raise e
 
     finally:
         cursor.close()
@@ -154,15 +168,15 @@ if __name__ == "__main__":
     conn = create_connection()
     create_table(
         conn,
-        [
-            CREATE_TABLE_QUERY,
-            CREATE_USER_QUERY,
-            CREATE_PROVIDER_QUERY,
-            CREATE_PERSCRIPTION_QUERY,
-            CREATE_INSURANCE_QUERY,
-            CREATE_PROVIDER_TO_INSURANCE_QUERY,
-            CREATE_USER_TO_INSURANCE_QUERY,
-        ],
+        # [
+        #     CREATE_APPT_TABLE_QUERY,
+        #     # CREATE_COVERAGE_TYPE_QUERY,
+        #     # CREATE_INSURANCE_QUERY,
+        #     # CREATE_USER_QUERY,
+        #     # CREATE_PROVIDER_QUERY,
+        #     # CREATE_PERSCRIPTION_QUERY,
+        #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
+        #     # CREATE_USER_TO_INSURANCE_QUERY,
+        # ],
     )
     conn.close()
-    print("TABLES CREATED")

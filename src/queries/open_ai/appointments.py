@@ -126,14 +126,17 @@ class AppointmentAnalysis:
 
 
 if __name__ == "__main__":
-    client = OpenAI()
+    import asyncio
+
+    client = AsyncOpenAI()
+
     context = SimpleDirectoryReader("../data").load_data()
     appt = AppointmentAnalysis(client, context)
 
     logging.info("Starting timer")
     start_time = time.time()
-    info = appt.get_info()
-    print(f"Returning type: {type(info)}")
+    info = asyncio.run(appt.get_info())
+    print(info)
     logging.info(f"Time taken for analysis: {time.time() - start_time}")
 
     # for key, value in info.items():

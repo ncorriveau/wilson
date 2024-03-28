@@ -73,17 +73,40 @@ class Summary(BaseModel):
     )
 
 
+class ProviderInfo(BaseModel):
+    """A model to represent the provider's information."""
+
+    provider_first_name: str = Field(
+        ...,
+        description="""The first name of the provider who wrote the note""",
+    )
+    provider_last_name: str = Field(
+        ...,
+        description="""The last name of the provider who wrote the note""",
+    )
+    provider_degree: str = Field(
+        ...,
+        description="""The medical degree of the provider, e.g. MD, DO, NP""",
+    )
+
+
 class AppointmentMeta(BaseModel):
     """A model to represent the metadata about the particular appointment."""
 
-    dr_name: str = Field(..., description="""The name of the doctor""")
+    provider_info: ProviderInfo = Field(
+        ..., description="""Information about the provider"""
+    )
     date: str = Field(
         ..., description="""The date of the appointment, in YYYY-MM-DD format"""
     )
 
     model_config = ConfigDict(
         json_schema_extra={
-            "dr_name": "Dr. Oz",
+            "provider_info": {
+                "provider_first_name": "John",
+                "provider_last_name": "Doe",
+                "provider_degree": "MD",
+            },
             "date": "2023-10-10",
         },
     )
