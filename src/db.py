@@ -186,6 +186,20 @@ def insert_appointment(conn, params: Dict[str, str]) -> None:
         cursor.close()
 
 
+def query_db(conn, query: str) -> List[Dict[str, Any]]:
+    """
+    Generic helper function to execute queries on the database
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query)
+        result = str(cursor.fetchall())
+    except Exception as e:
+        result = f"Error while executing query {e}"
+
+    return result
+
+
 if __name__ == "__main__":
     conn = create_connection()
     create_table(

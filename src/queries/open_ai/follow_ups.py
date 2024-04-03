@@ -10,8 +10,11 @@ from src.db import (
     CREATE_PROVIDER_QUERY,
     CREATE_PROVIDER_TO_INSURANCE_QUERY,
     CREATE_QUERIES,
+    CREATE_SPECIALTIES_QUERY,
     CREATE_USER_QUERY,
     CREATE_USER_TO_INSURANCE_QUERY,
+    create_connection,
+    query_db,
 )
 from src.queries.open_ai.appointments import OAIRequest, send_rqt
 
@@ -33,16 +36,18 @@ class FollowUpQueries(BaseModel):
     tasks: List[TaskQuery] = Field(..., description="A query for each follow up task")
 
 
-database_schema_string = "\n".join(
-    [
-        CREATE_PROVIDER_QUERY,
-        CREATE_USER_QUERY,
-        CREATE_INSURANCE_QUERY,
-        CREATE_PROVIDER_TO_INSURANCE_QUERY,
-        CREATE_USER_TO_INSURANCE_QUERY,
-    ]
-)
+# database_schema_string = "\n".join(
+#     [
+#         CREATE_PROVIDER_QUERY,
+#         CREATE_USER_QUERY,
+#         CREATE_INSURANCE_QUERY,
+#         CREATE_PROVIDER_TO_INSURANCE_QUERY,
+#         CREATE_USER_TO_INSURANCE_QUERY,
+#         CREATE_SPECIALTIES_QUERY,
+#     ]
+# )
 
+database_schema_string = "\n".join(CREATE_QUERIES)
 
 tools = [
     {
@@ -60,7 +65,7 @@ tools = [
                                 SQL should be written using this database schema:
                                 {database_schema_string}
                                 The following columns only contain the following values:
-                                - providers.specialty: 'Allergy', 'GI', 'ENT'
+                                - specialties.specialty: 'ENT', 'ALLERGIST', 'GASTRO'
                                 
                                 The query should be returned in plain text, not in JSON.
                                 """,
@@ -99,16 +104,28 @@ tasks = {
 tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 
+# TODO: add where statement to filter for location and insurance of patient
+
 rqt = OAIRequest(
     system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
     user_msg=USER_MSG.format(tasks),
     response_schema=FollowUpQueries,
     tools=tools,
+    tool_choices=tool_choice,
 )
 
 if __name__ == "__main__":
-    # print(database_schema_string)
     client = OpenAI()
+    conn = create_connection()
+
     response = send_rqt(client, rqt)
-    print(response)
+    for task in response.tasks:
+        logging.info(f"Query for Task: {task.query}")
+
+        assert isinstance(task.query, str)
+        result = query_db(conn, task.query)
+
+        logging.info(f"Result: {result}")
+
+    conn.close()
     client.close()
