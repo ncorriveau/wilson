@@ -138,7 +138,7 @@ class AppointmentAnalysis:
             system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
         )
 
-    async def get_info(self) -> dict[str, Type[BaseModel]]:
+    async def a_get_info(self) -> dict[str, Type[BaseModel]]:
         """Extracts information from a given document using the OpenAI API."""
         rqts = [
             self.perscriptions_rqt,
@@ -149,7 +149,7 @@ class AppointmentAnalysis:
         responses = {}
         for rqt in rqts:
             logging.debug(f"Sending rqt for {rqt.response_schema.__name__}")
-            response = await send_rqt(self._client, rqt)
+            response = await a_send_rqt(self._client, rqt)
             responses[rqt.response_schema.__name__] = response
 
         return responses
@@ -160,12 +160,12 @@ if __name__ == "__main__":
 
     client = AsyncOpenAI()
 
-    context = SimpleDirectoryReader("../data").load_data()
+    context = SimpleDirectoryReader("./data").load_data()
     appt = AppointmentAnalysis(client, context)
 
     logging.info("Starting timer")
     start_time = time.time()
-    info = asyncio.run(appt.get_info())
+    info = asyncio.run(appt.a_get_info())
     print(info)
     logging.info(f"Time taken for analysis: {time.time() - start_time}")
 
