@@ -5,17 +5,7 @@ from typing import List
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from src.db import (
-    CREATE_INSURANCE_QUERY,
-    CREATE_PROVIDER_QUERY,
-    CREATE_PROVIDER_TO_INSURANCE_QUERY,
-    CREATE_QUERIES,
-    CREATE_SPECIALTIES_QUERY,
-    CREATE_USER_QUERY,
-    CREATE_USER_TO_INSURANCE_QUERY,
-    create_connection,
-    query_db,
-)
+from src.db import CREATE_QUERIES, create_connection, query_db
 from src.queries.open_ai.appointments import OAIRequest, send_rqt
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -35,17 +25,6 @@ class FollowUpQueries(BaseModel):
 
     tasks: List[TaskQuery] = Field(..., description="A query for each follow up task")
 
-
-# database_schema_string = "\n".join(
-#     [
-#         CREATE_PROVIDER_QUERY,
-#         CREATE_USER_QUERY,
-#         CREATE_INSURANCE_QUERY,
-#         CREATE_PROVIDER_TO_INSURANCE_QUERY,
-#         CREATE_USER_TO_INSURANCE_QUERY,
-#         CREATE_SPECIALTIES_QUERY,
-#     ]
-# )
 
 database_schema_string = "\n".join(CREATE_QUERIES)
 
@@ -104,7 +83,7 @@ tasks = {
 tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 
-# TODO: add where statement to filter for location and insurance of patient
+# TODO: add where statement to filter for location and insurance of patient, and need ranking criteria
 
 rqt = OAIRequest(
     system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
@@ -121,10 +100,7 @@ if __name__ == "__main__":
     response = send_rqt(client, rqt)
     for task in response.tasks:
         logging.info(f"Query for Task: {task.query}")
-
-        assert isinstance(task.query, str)
         result = query_db(conn, task.query)
-
         logging.info(f"Result: {result}")
 
     conn.close()
