@@ -1,14 +1,14 @@
 import logging
 import sys
 import time
-from typing import Type
+from typing import Any, Dict, Type
 
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
-import data_models.appointment_summary as appointment
-from prompts import open_ai as oai_prompts
+import src.data_models.appointment_summary as appointment
+from src.prompts import open_ai as oai_prompts
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -22,9 +22,6 @@ class OAIRequest(BaseModel):
     max_tokens: int = Field(default=1000)
     temperature: float = Field(default=0.1)
     stop: list = Field(default=["```"])
-    response_schema: Type[BaseModel] = Field(
-        ..., description="Pydantic model specifying JSON response schema."
-    )
 
     # prompts
     system_msg: str = Field(default="")
@@ -32,10 +29,39 @@ class OAIRequest(BaseModel):
     assistant_msg: str = Field(default="```json")
 
     # optional parameters - only available for recent models
+    response_schema: Type[BaseModel] | None = Field(
+        default=None, description="Pydantic model specifying JSON response schema."
+    )
     response_format: dict = Field(default={"type": "json_object"})
+    tools: list = Field(default=[])
+    tool_choices: Dict[str, Any] | None = Field(
+        default=None, description="Parameter to force tool choices."
+    )
 
 
-async def send_rqt(client: OpenAI | AsyncOpenAI, rqt: OAIRequest) -> Type[BaseModel]:
+def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
+    """Extracts information from a given document using the OpenAI API."""
+    response = client.chat.completions.create(
+        model=rqt.model,
+        max_tokens=rqt.max_tokens,
+        temperature=rqt.temperature,
+        stop=rqt.stop,
+        messages=[
+            {"role": "system", "content": rqt.system_msg},
+            {"role": "user", "content": rqt.user_msg},
+            {"role": "assistant", "content": rqt.assistant_msg},
+        ],
+        tools=rqt.tools,
+        response_format={"type": "json_object"},
+    )
+
+    if not rqt.response_schema:
+        return response.choices[0].message.content
+
+    return rqt.response_schema.model_validate_json(response.choices[0].message.content)
+
+
+async def a_send_rqt(client: AsyncOpenAI, rqt: OAIRequest) -> Type[BaseModel]:
     """Extracts information from a given document using the OpenAI API."""
     response = await client.chat.completions.create(
         model=rqt.model,
@@ -49,6 +75,10 @@ async def send_rqt(client: OpenAI | AsyncOpenAI, rqt: OAIRequest) -> Type[BaseMo
         ],
         response_format={"type": "json_object"},
     )
+
+    if not rqt.response_schema:
+        return response.choices[0].message.content
+
     return rqt.response_schema.model_validate_json(response.choices[0].message.content)
 
 

@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import List
 
 from openai import OpenAI
 from pydantic import BaseModel, Field
@@ -24,6 +25,12 @@ class TaskQuery(BaseModel):
     query: str = Field(
         ..., description="SQL query extracting info to assist in follow up tasks."
     )
+
+
+class FollowUpQueries(BaseModel):
+    """A model to represent the follow up tasks assigned to the patient"""
+
+    tasks: List[TaskQuery] = Field(..., description="A query for each follow up task")
 
 
 database_schema_string = "\n".join(
@@ -52,6 +59,9 @@ tools = [
                                 SQL query extracting info to assist in follow up tasks.
                                 SQL should be written using this database schema:
                                 {database_schema_string}
+                                The following columns only contain the following values:
+                                - providers.specialty: 'Allergy', 'GI', 'ENT'
+                                
                                 The query should be returned in plain text, not in JSON.
                                 """,
                     }
@@ -66,6 +76,9 @@ SYSTEM_MSG = """You are an expert SQL practioners specialized in medical data.
 A physician has assigned follow up tasks for the patient. Your job is to translate
 these tasks into a SQL query to help identify suitable doctors for the follow up tasks.
 If the multiple tasks provided are related, you can write a single query that will help identify suitable doctors for all the tasks.
+Follow the JSON schema provided below to ensure the information is returned in the correct format.
+JSON Schema: 
+{}
 """
 USER_MSG = """The physician has assigned the following follow up tasks for the patient:
 {}
@@ -87,8 +100,9 @@ tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 
 rqt = OAIRequest(
-    system_msg=SYSTEM_MSG,
+    system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
     user_msg=USER_MSG.format(tasks),
+    response_schema=FollowUpQueries,
     tools=tools,
 )
 
@@ -97,7 +111,4 @@ if __name__ == "__main__":
     client = OpenAI()
     response = send_rqt(client, rqt)
     print(response)
-    assistant_message = response.choices[0].message
-    print(assistant_message)
-
     client.close()
