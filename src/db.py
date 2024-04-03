@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS providers (
     id SERIAL PRIMARY KEY,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
+    specialty_id INT NOT NULL REFERENCES specialties(id),
     email TEXT,
-    specialty TEXT,
     location TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -115,6 +115,16 @@ CREATE TABLE IF NOT EXISTS user_to_insurance (
 );
 """
 
+CREATE_SPECIALTIES_QUERY = """
+CREATE TABLE IF NOT EXISTS specialties (
+    id SERIAL PRIMARY KEY,
+    specialty VARCHAR(255) UNIQUE NOT NULL,
+    friendly_name TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
 CREATE_QUERIES = [
     CREATE_APPT_TABLE_QUERY,
     CREATE_COVERAGE_TYPE_QUERY,
@@ -124,6 +134,7 @@ CREATE_QUERIES = [
     CREATE_PERSCRIPTION_QUERY,
     CREATE_PROVIDER_TO_INSURANCE_QUERY,
     CREATE_USER_TO_INSURANCE_QUERY,
+    CREATE_SPECIALTIES_QUERY,
 ]
 
 
@@ -179,6 +190,7 @@ if __name__ == "__main__":
     conn = create_connection()
     create_table(
         conn,
+        [CREATE_SPECIALTIES_QUERY],
         # [
         #     CREATE_APPT_TABLE_QUERY,
         #     # CREATE_COVERAGE_TYPE_QUERY,
