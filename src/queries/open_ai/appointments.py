@@ -7,8 +7,8 @@ from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
-import src.data_models.appointment_summary as appointment
-from src.prompts import open_ai as oai_prompts
+from data_models import appointment_summary as appointment
+from prompts import open_ai as oai_prompts
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
@@ -18,7 +18,7 @@ class OAIRequest(BaseModel):
     """A model to represent a given request to the OpenAI API."""
 
     # required parameters
-    model: str = Field(default="gpt-4")
+    model: str = Field(default="gpt-4-1106-preview")
     max_tokens: int = Field(default=1000)
     temperature: float = Field(default=0.1)
     stop: list = Field(default=["```"])
@@ -54,7 +54,7 @@ def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
             {"role": "assistant", "content": rqt.assistant_msg},
         ],
         tools=rqt.tools,
-        # response_format={"type": "json_object"},
+        response_format={"type": "json_object"},
     )
 
     if not rqt.response_schema:

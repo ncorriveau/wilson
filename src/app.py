@@ -8,8 +8,15 @@ from typing_extensions import Annotated
 
 from db import create_connection, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
+from vector_db import load_documents
 
 client = AsyncOpenAI()
+params_to_exclude = [
+    "user_id",
+    "provider_id",
+    "filename",
+    "appointment_date",
+]
 
 app = FastAPI(
     title="Wilson AI API",
@@ -32,7 +39,7 @@ class ApptRqt(BaseModel):
 async def analyze_appointment(appt_rqt: ApptRqt):
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     appt = AppointmentAnalysis(client, context)
-    info = await appt.get_info()
+    info = await appt.a_get_info()
 
     provider_id = fake_get_provider_id(info.get("AppointmentMeta", {}).provider_info)
 
@@ -46,11 +53,18 @@ async def analyze_appointment(appt_rqt: ApptRqt):
         "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
     }
 
+    # insert data into vector db
+    v_db_params = {k: v for k, v in params.items() if k not in params_to_exclude}
+    load_documents(
+        appt_rqt.data_location, v_db_params
+    )  # we load the document twice.should fix this later
+    print(f"Context loaded into vector db")
+    # insert data into postgres db
     conn = create_connection()
-
     try:
         insert_appointment(conn, params)
         print(f"Inserted Succesfully")
+
     except Exception as e:
         print(f"Error: {e}")
     finally:

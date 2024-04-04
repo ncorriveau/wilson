@@ -22,8 +22,6 @@ DB_PATH = "./chroma_db"
 embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-base-en-v1.5")
 
 
-# load documents
-# meta data something like user id, document name, appointment visit time, etc
 def load_documents(data_path: str, metadata: Dict[Any, Any]) -> None:
     """Load documents from a directory into the vector database."""
     documents = SimpleDirectoryReader(data_path).load_data()
