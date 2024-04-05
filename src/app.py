@@ -8,7 +8,12 @@ from typing_extensions import Annotated
 
 from db import create_connection, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
-from vector_db import load_documents
+from vector_db import (
+    build_index,
+    embed_model_llamaindex,
+    load_documents,
+    query_documents,
+)
 
 client = AsyncOpenAI()
 params_to_exclude = [
@@ -35,6 +40,11 @@ class ApptRqt(BaseModel):
     data_location: str = Field(..., description="The location of the data to analyze.")
 
 
+class QueryRqt(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    query: str = Field(..., description="Query to be executed on the data")
+
+
 @app.post("/api/analyze_appointment/")
 async def analyze_appointment(appt_rqt: ApptRqt):
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
@@ -59,6 +69,7 @@ async def analyze_appointment(appt_rqt: ApptRqt):
         appt_rqt.data_location, v_db_params
     )  # we load the document twice.should fix this later
     print(f"Context loaded into vector db")
+
     # insert data into postgres db
     conn = create_connection()
     try:
@@ -72,3 +83,10 @@ async def analyze_appointment(appt_rqt: ApptRqt):
 
     print(f"Done - returning")
     return info
+
+
+@app.post("/api/query_data/")
+async def query_data(query_rqt: QueryRqt):
+    index = build_index(embed_model_llamaindex)
+    response = query_documents(query_rqt.query, index)
+    return response
