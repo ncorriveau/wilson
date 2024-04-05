@@ -15,13 +15,14 @@ from vector_db import (
     query_documents,
 )
 
-client = AsyncOpenAI()
-params_to_exclude = [
+METADATA_PARAMS = [
     "user_id",
     "provider_id",
     "filename",
     "appointment_date",
 ]
+
+client = AsyncOpenAI()
 
 app = FastAPI(
     title="Wilson AI API",
@@ -63,11 +64,9 @@ async def analyze_appointment(appt_rqt: ApptRqt):
         "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
     }
 
-    # insert data into vector db
-    v_db_params = {k: v for k, v in params.items() if k not in params_to_exclude}
-    load_documents(
-        appt_rqt.data_location, v_db_params
-    )  # we load the document twice.should fix this later
+    # insert data into vector db excludign some keys
+    v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
+    load_documents(context, v_db_params)
     print(f"Context loaded into vector db")
 
     # insert data into postgres db
@@ -88,5 +87,5 @@ async def analyze_appointment(appt_rqt: ApptRqt):
 @app.post("/api/query_data/")
 async def query_data(query_rqt: QueryRqt):
     index = build_index(embed_model_llamaindex)
-    response = query_documents(query_rqt.query, index)
+    response = query_documents(query_rqt.query, query_rqt.user_id, index)
     return response

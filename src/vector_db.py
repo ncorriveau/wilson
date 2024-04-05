@@ -11,6 +11,7 @@ import chromadb.utils.embedding_functions as embedding_functions
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.base.response.schema import Response
 from llama_index.core.schema import Document
+from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
@@ -67,8 +68,18 @@ def build_index(embed_model: Any) -> VectorStoreIndex:
     return index
 
 
-def query_documents(query: str, index) -> Response:
-    query_engine = index.as_query_engine()
+def query_documents(query: str, user_id: int, index) -> Response:
+    """query vector db filtering based off user_id in metadata"""
+    query_engine = index.as_query_engine(
+        filters=MetadataFilters(
+            filters=[
+                MetadataFilter(
+                    key="user_id",
+                    value=user_id,
+                )
+            ]
+        )
+    )
     response = query_engine.query(query)
     return response
 
@@ -82,6 +93,6 @@ if __name__ == "__main__":
     index = build_index(embed_model_llamaindex)
 
     _logger.info("Querying documents...")
-    response = query_documents("What is the patient's name?", index)
+    response = query_documents("What is the patient's name?", 1, index)
 
     print(response)
