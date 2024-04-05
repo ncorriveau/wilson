@@ -8,10 +8,9 @@ from typing import Any, Dict, List
 
 import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
-from IPython.display import Markdown, display
-from llama_index.core import SimpleDirectoryReader, StorageContext, VectorStoreIndex
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.base.response.schema import Response
-from llama_index.core.schema import Document, MetadataMode
+from llama_index.core.schema import Document
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
@@ -20,12 +19,13 @@ _logger = logging.getLogger(__name__)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 COLLECTION = "appointment"
-DB_PATH = "./chroma_db"
+DB_PATH = "/Users/nickocorriveau/dev/wilson/chroma_db"
+HF_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
 
-embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-base-en-v1.5")
-huggingface_ef = embedding_functions.HuggingFaceEmbeddingFunction(
+embed_model_llamaindex = HuggingFaceEmbedding(model_name=HF_EMBED_MODEL)
+embed_model_chroma = embedding_functions.HuggingFaceEmbeddingFunction(
     api_key=os.environ["HUGGINGFACE_API_KEY"],
-    model_name="BAAI/bge-base-en-v1.5",
+    model_name=HF_EMBED_MODEL,
 )
 
 
@@ -45,11 +45,12 @@ def load_documents(documents: List[Document], metadata: Dict[Any, Any]) -> None:
     """Load documents from a directory into the vector database."""
     client = chromadb.PersistentClient(path=DB_PATH)
     collection = client.get_or_create_collection(
-        name=COLLECTION, embedding_function=huggingface_ef
+        name=COLLECTION, embedding_function=embed_model_chroma
     )
+
     collection.upsert(
         documents=[document.text for document in documents],
-        metadatas=[metadata for document in documents],
+        metadatas=[metadata for _ in documents],
         ids=[create_hash_id(document.text, metadata) for document in documents],
     )
     return
@@ -78,8 +79,9 @@ if __name__ == "__main__":
     load_documents(context, {"filename": "appointment1"})
 
     _logger.info("Building index...")
-    index = build_index(embed_model)
+    index = build_index(embed_model_llamaindex)
 
     _logger.info("Querying documents...")
     response = query_documents("What is the patient's name?", index)
+
     print(response)
