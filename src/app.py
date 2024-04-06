@@ -1,9 +1,12 @@
+import io
 from typing import Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+from PyPDF2 import PdfReader
 from typing_extensions import Annotated
 
 from db import create_connection, insert_appointment
@@ -48,6 +51,8 @@ class QueryRqt(BaseModel):
 
 @app.post("/api/analyze_appointment/")
 async def analyze_appointment(appt_rqt: ApptRqt):
+    # TODO: have this read in from an s3 location
+    # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     appt = AppointmentAnalysis(client, context)
     info = await appt.a_get_info()
@@ -89,3 +94,20 @@ async def query_data(query_rqt: QueryRqt):
     index = build_index(embed_model_llamaindex)
     response = query_documents(query_rqt.query, query_rqt.user_id, index)
     return response
+
+
+@app.post("/upload-pdf/")
+async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    # TODO: add some user id authentication
+    if not file.content_type == "application/pdf":
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Please upload a PDF."
+        )
+    content = await file.read()
+    file_ = io.BytesIO(content)
+    pdf_reader = PdfReader(file_)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+
+    return {"filename": file.filename, "user_id": x_user_id}
