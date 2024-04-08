@@ -8,7 +8,6 @@ from typing import List
 # from src.db import CREATE_QUERIES, create_connection, query_db
 # from src.queries.open_ai.appointments import OAIRequest, send_rqt
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 from selenium import webdriver
