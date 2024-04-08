@@ -85,6 +85,11 @@ tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 # TODO: add where statement to filter for location and insurance of patient, and need ranking criteria
 
+
+def create_filter_statement(user_info: dict[str]) -> str:
+    return f"WHERE location = '{user_info['location']}' AND insurance = '{user_info['insurance']}'"
+
+
 rqt = OAIRequest(
     system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
     user_msg=USER_MSG.format(tasks),
@@ -98,9 +103,12 @@ if __name__ == "__main__":
     conn = create_connection()
 
     response = send_rqt(client, rqt)
+    logging.info(f"Result with filter: {response}")
+
     for task in response.tasks:
-        logging.info(f"Query for Task: {task.query}")
-        result = query_db(conn, task.query)
+        query = task.query + create_filter_statement(response.user_info)
+        logging.info(f"Query for Task: {query}")
+        result = query_db(conn, query)
         logging.info(f"Result: {result}")
 
     conn.close()
