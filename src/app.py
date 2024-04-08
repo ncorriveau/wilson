@@ -9,6 +9,7 @@ from PyPDF2 import PdfReader
 
 from db import create_connection, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
+from queries.open_ai.follow_ups import get_followup_suggestions
 from vector_db import (
     build_index,
     embed_model_llamaindex,
@@ -91,6 +92,12 @@ async def query_data(query_rqt: QueryRqt):
     index = build_index(embed_model_llamaindex)
     response = query_documents(query_rqt.query, query_rqt.user_id, index)
     return response
+
+
+@app.post("/api/get_follow_ups")
+async def get_follow_ups(user_id: int, tasks: str):
+    follow_ups = await get_followup_suggestions(client, user_id, tasks)
+    return follow_ups
 
 
 @app.post("/upload-pdf/")

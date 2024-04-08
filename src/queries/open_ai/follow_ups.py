@@ -1,12 +1,13 @@
 import logging
 import sys
-from typing import List
+from typing import Any, List, Tuple
 
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
+from src.data_models.appointment_summary import FollowUps
 from src.db import CREATE_QUERIES, create_connection, query_db
-from src.queries.open_ai.appointments import OAIRequest, send_rqt
+from src.queries.open_ai.appointments import OAIRequest, a_send_rqt, send_rqt
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -27,7 +28,7 @@ class FollowUpQueries(BaseModel):
 
 database_schema_string = "\n".join(CREATE_QUERIES)
 
-tools = [
+TOOLS = [
     {
         "type": "function",
         "function": {
@@ -55,6 +56,8 @@ tools = [
     }
 ]
 
+TOOL_CHOICE = {"type": "function", "function": {"name": "ask_database"}}
+
 SYSTEM_MSG = """You are an expert SQL practioners specialized in medical data.
 A physician has assigned follow up tasks for the patient. Your job is to translate
 these tasks into a SQL query to help identify suitable doctors for the follow up tasks.
@@ -69,8 +72,6 @@ Please write a SQL query that will help identify suitable doctors for these foll
 For example, if the task was 'Schedule an appointment with a ENT specialist.', 
 you could write a query that would return a list of ENT specialists using the database schema. 
 """
-
-tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 
 def create_filter_statement(conn, user_id: int) -> str:
@@ -91,6 +92,37 @@ def create_filter_statement(conn, user_id: int) -> str:
                )"""
 
 
+async def get_followup_suggestions(
+    client: OpenAI | AsyncOpenAI, user_id: int, tasks: FollowUps
+) -> list[Any]:
+    """Get follow up suggestions for the patient based on the tasks assigned by the physician."""
+    rqt = OAIRequest(
+        system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
+        user_msg=USER_MSG.format(tasks),
+        response_schema=FollowUpQueries,
+        tools=TOOLS,
+        tool_choices=TOOL_CHOICE,
+    )
+    conn = create_connection()
+    filter_statement = create_filter_statement(conn, user_id)
+    response = await a_send_rqt(client, rqt)
+
+    logging.info(f"Response: {response}")
+
+    followup_suggestions = []
+    for task in response.tasks:
+        query = task.query + filter_statement
+        logging.info(f"Query for Task: {query}")
+
+        result = query_db(conn, query)
+        logging.info(f"Result: {result}")
+
+        followup_suggestions.append(result)
+
+    conn.close()
+    return followup_suggestions
+
+
 if __name__ == "__main__":
     tasks = {
         "tasks": [
@@ -103,8 +135,8 @@ if __name__ == "__main__":
         system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
         user_msg=USER_MSG.format(tasks),
         response_schema=FollowUpQueries,
-        tools=tools,
-        tool_choices=tool_choice,
+        tools=TOOLS,
+        tool_choices=TOOL_CHOICE,
     )
 
     client = OpenAI()
