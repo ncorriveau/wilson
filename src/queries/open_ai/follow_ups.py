@@ -9,7 +9,6 @@ from src.db import CREATE_QUERIES, create_connection, query_db
 from src.queries.open_ai.appointments import OAIRequest, send_rqt
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 
 class TaskQuery(BaseModel):
@@ -71,43 +70,57 @@ For example, if the task was 'Schedule an appointment with a ENT specialist.',
 you could write a query that would return a list of ENT specialists using the database schema. 
 """
 
-
-tasks = {
-    "tasks": [
-        {"task": "Consult Allergy and GI."},
-        {"task": "AMB REF TO ALLERGY & CLIN IMM (FPA ASTHMA)."},
-        {"task": "AMB REF TO GASTROENTEROLOGY."},
-    ]
-}
-
 tool_choice = {"type": "function", "function": {"name": "ask_database"}}
 
 
-# TODO: add where statement to filter for location and insurance of patient, and need ranking criteria
+def create_filter_statement(conn, user_id: int) -> str:
+    get_info = f"SELECT u.location, u.insurance_id FROM users u WHERE u.id = {user_id}"
+    result = query_db(conn, get_info)
+    logging.info(f"Result: {result}")
 
+    if not result:
+        return ""  # is this the behavior we want?
 
-def create_filter_statement(user_info: dict[str]) -> str:
-    return f"WHERE location = '{user_info['location']}' AND insurance = '{user_info['insurance']}'"
+    location = result[0][0]
+    insurance_id = result[0][1]
 
+    return f"""AND providers.location = '{location}' 
+               AND providers.id in (
+                    select provider_id from provider_to_insurance pti 
+		            where pti.insurance_id = {insurance_id}
+               )"""
 
-rqt = OAIRequest(
-    system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
-    user_msg=USER_MSG.format(tasks),
-    response_schema=FollowUpQueries,
-    tools=tools,
-    tool_choices=tool_choice,
-)
 
 if __name__ == "__main__":
+    tasks = {
+        "tasks": [
+            {"task": "Consult Allergy and GI."},
+            {"task": "AMB REF TO ALLERGY & CLIN IMM (FPA ASTHMA)."},
+            {"task": "AMB REF TO GASTROENTEROLOGY."},
+        ]
+    }
+    rqt = OAIRequest(
+        system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
+        user_msg=USER_MSG.format(tasks),
+        response_schema=FollowUpQueries,
+        tools=tools,
+        tool_choices=tool_choice,
+    )
+
     client = OpenAI()
     conn = create_connection()
+    user_id = 1
+    # this will need to be added dynamically
 
+    filter_statement = create_filter_statement(conn, user_id)
     response = send_rqt(client, rqt)
-    logging.info(f"Result with filter: {response}")
+
+    logging.info(f"Response: {response}")
 
     for task in response.tasks:
-        query = task.query + create_filter_statement(response.user_info)
+        query = task.query + filter_statement
         logging.info(f"Query for Task: {query}")
+
         result = query_db(conn, query)
         logging.info(f"Result: {result}")
 

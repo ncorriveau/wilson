@@ -2,12 +2,10 @@ import io
 from typing import Dict
 
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
-from typing_extensions import Annotated
 
 from db import create_connection, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
@@ -85,7 +83,6 @@ async def analyze_appointment(appt_rqt: ApptRqt):
     finally:
         conn.close()
 
-    print(f"Done - returning")
     return info
 
 

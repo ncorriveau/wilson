@@ -193,7 +193,8 @@ def query_db(conn, query: str) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     try:
         cursor.execute(query)
-        result = str(cursor.fetchall())
+        result = cursor.fetchall()
+
     except Exception as e:
         result = f"Error while executing query {e}"
 
