@@ -5,9 +5,9 @@ from typing import Any, List, Tuple
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
-from src.data_models.appointment_summary import FollowUps
-from src.db import CREATE_QUERIES, create_connection, query_db
-from src.queries.open_ai.appointments import OAIRequest, a_send_rqt, send_rqt
+from data_models.appointment_summary import FollowUps
+from db import CREATE_QUERIES, create_connection, query_db
+from queries.open_ai.appointments import OAIRequest, a_send_rqt, send_rqt
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -71,13 +71,15 @@ USER_MSG = """The physician has assigned the following follow up tasks for the p
 Please write a SQL query that will help identify suitable doctors for these follow up tasks.
 For example, if the task was 'Schedule an appointment with a ENT specialist.', 
 you could write a query that would return a list of ENT specialists using the database schema. 
+
+Before you respond, ENSURE that the query is written following the correct database schema.
 """
 
 
 def create_filter_statement(conn, user_id: int) -> str:
     get_info = f"SELECT u.location, u.insurance_id FROM users u WHERE u.id = {user_id}"
     result = query_db(conn, get_info)
-    logging.info(f"Result: {result}")
+    logging.info(f"Result from filter statement: {result}")
 
     if not result:
         return ""  # is this the behavior we want?
@@ -85,7 +87,7 @@ def create_filter_statement(conn, user_id: int) -> str:
     location = result[0][0]
     insurance_id = result[0][1]
 
-    return f"""AND providers.location = '{location}' 
+    return f""" AND providers.location = '{location}' 
                AND providers.id in (
                     select provider_id from provider_to_insurance pti 
 		            where pti.insurance_id = {insurance_id}
@@ -106,12 +108,11 @@ async def get_followup_suggestions(
     conn = create_connection()
     filter_statement = create_filter_statement(conn, user_id)
     response = await a_send_rqt(client, rqt)
-
-    logging.info(f"Response: {response}")
+    logging.info(f"Response for SQL Query: {response}")
 
     followup_suggestions = []
     for task in response.tasks:
-        query = task.query + filter_statement
+        query = task.query.replace(";", "") + filter_statement
         logging.info(f"Query for Task: {query}")
 
         result = query_db(conn, query)

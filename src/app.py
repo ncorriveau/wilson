@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
+from data_models.appointment_summary import FollowUps
 from db import create_connection, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
 from queries.open_ai.follow_ups import get_followup_suggestions
@@ -46,6 +47,11 @@ class ApptRqt(BaseModel):
 class QueryRqt(BaseModel):
     user_id: int = Field(..., description="The user id of the patient.")
     query: str = Field(..., description="Query to be executed on the data")
+
+
+class FollowUpRqt(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
 
 
 @app.post("/api/analyze_appointment/")
@@ -95,8 +101,10 @@ async def query_data(query_rqt: QueryRqt):
 
 
 @app.post("/api/get_follow_ups")
-async def get_follow_ups(user_id: int, tasks: str):
-    follow_ups = await get_followup_suggestions(client, user_id, tasks)
+async def get_follow_ups(followup_rqt: FollowUpRqt):
+    tasks = followup_rqt.follow_ups.tasks
+    print(f"Received tasks: {tasks}")
+    follow_ups = await get_followup_suggestions(client, followup_rqt.user_id, tasks)
     return follow_ups
 
 
