@@ -1,9 +1,11 @@
+import asyncio
 import json
 import os
 from typing import Any, Dict, List
 
 import asyncpg
 import psycopg2
+from psycopg2.extensions import connection
 
 password = os.getenv("POSTGRES_PASSWORD")
 
@@ -125,6 +127,22 @@ CREATE TABLE IF NOT EXISTS specialties (
 );
 """
 
+pg_params = {
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": password,
+    "host": "localhost",
+    "port": "5432",
+}
+
+async_pg_params = {
+    "database": "postgres",
+    "user": "postgres",
+    "password": password,
+    "host": "localhost",
+    "port": "5432",
+}
+
 
 CREATE_QUERIES = [
     CREATE_APPT_TABLE_QUERY,
@@ -141,31 +159,17 @@ CREATE_QUERIES = [
 
 async def create_pool():
     return await asyncpg.create_pool(
-        database="postgres",
-        user="postgres",
-        password=password,
-        host="localhost",
-        port="5432",
+        **async_pg_params,
     )
-
-
-# This pool will be initialized at app startup
-db_pool = None
 
 
 # TODO: read these from config
-def create_connection():
-    conn = psycopg2.connect(
-        dbname="postgres",
-        user="postgres",
-        password=password,
-        host="localhost",
-        port="5432",
-    )
+def create_connection() -> connection:
+    conn = psycopg2.connect(**pg_params)
     return conn
 
 
-def create_table(conn, create_queries: List[str]) -> None:
+def create_table(conn: connection, create_queries: List[str]) -> None:
     cursor = conn.cursor()
     for query in create_queries:
         print(f"executing query: {query}")
@@ -175,7 +179,7 @@ def create_table(conn, create_queries: List[str]) -> None:
     cursor.close()
 
 
-def insert_appointment(conn, params: Dict[str, str]) -> None:
+def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -201,7 +205,7 @@ def insert_appointment(conn, params: Dict[str, str]) -> None:
         cursor.close()
 
 
-def query_db(conn, query: str) -> List[Dict[str, Any]]:
+def query_db(conn: connection, query: str) -> List[Dict[str, Any]]:
     """
     Generic helper function to execute queries on the database
     """
@@ -218,6 +222,14 @@ def query_db(conn, query: str) -> List[Dict[str, Any]]:
 
 if __name__ == "__main__":
     conn = create_connection()
+    # async def main():
+    #     async with asyncpg.create_pool(**async_pg_params) as pool:
+    #         async with pool.acquire() as conn:
+    #             print(f"Executing statement")
+    #             await conn.execute(CREATE_APPT_TABLE_QUERY)
+
+    # asyncio.run(main())
+
     create_table(
         conn,
         [CREATE_SPECIALTIES_QUERY],
@@ -232,4 +244,5 @@ if __name__ == "__main__":
         #     # CREATE_USER_TO_INSURANCE_QUERY,
         # ],
     )
+    print(f"Table created successfully")
     conn.close()

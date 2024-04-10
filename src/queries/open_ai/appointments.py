@@ -17,7 +17,7 @@ class OAIRequest(BaseModel):
     """A model to represent a given request to the OpenAI API."""
 
     # required parameters
-    model: str = Field(default="gpt-4")
+    model: str = Field(default="gpt-4-turbo")
     max_tokens: int = Field(default=1000)
     temperature: float = Field(default=0.1)
     stop: list = Field(default=["```"])
@@ -141,7 +141,7 @@ class AppointmentAnalysis:
         )
 
     async def a_get_info(self) -> dict[str, Type[BaseModel]]:
-        """Extracts information from a given document using the OpenAI API."""
+        """Async function to extract info from a given document using the OpenAI API."""
         rqts = [
             self.perscriptions_rqt,
             self.metadata_rqt,
@@ -151,9 +151,7 @@ class AppointmentAnalysis:
         responses = {}
         for rqt in rqts:
             logging.debug(f"Sending rqt for {rqt.response_schema.__name__}")
-            response = await a_send_rqt(
-                self._client, rqt
-            )  # TODO: clean this up to use a single function
+            response = await a_send_rqt(self._client, rqt)
             responses[rqt.response_schema.__name__] = response
 
         return responses

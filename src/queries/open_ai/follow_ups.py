@@ -3,6 +3,7 @@ import sys
 from typing import Any, List, Tuple
 
 from openai import AsyncOpenAI, OpenAI
+from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
 
 from data_models.appointment_summary import FollowUps
@@ -95,9 +96,10 @@ def create_filter_statement(conn, user_id: int) -> str:
 
 
 async def get_followup_suggestions(
-    client: OpenAI | AsyncOpenAI, user_id: int, tasks: FollowUps
+    client: OpenAI | AsyncOpenAI, conn: connection, user_id: int, tasks: FollowUps
 ) -> list[Any]:
     """Get follow up suggestions for the patient based on the tasks assigned by the physician."""
+
     rqt = OAIRequest(
         system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
         user_msg=USER_MSG.format(tasks),
@@ -105,7 +107,7 @@ async def get_followup_suggestions(
         tools=TOOLS,
         tool_choices=TOOL_CHOICE,
     )
-    conn = create_connection()
+
     filter_statement = create_filter_statement(conn, user_id)
     response = await a_send_rqt(client, rqt)
     logging.info(f"Response for SQL Query: {response}")
@@ -120,7 +122,6 @@ async def get_followup_suggestions(
 
         followup_suggestions.append(result)
 
-    conn.close()
     return followup_suggestions
 
 

@@ -2,14 +2,14 @@ import io
 from contextlib import asynccontextmanager
 from typing import Dict
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
 from data_models.appointment_summary import FollowUps
-from db import create_connection, create_pool, db_pool, insert_appointment
+from db import create_connection, create_pool, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
 from queries.open_ai.follow_ups import get_followup_suggestions
 from vector_db import (
@@ -28,18 +28,18 @@ METADATA_PARAMS = [
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    print("starting")
+async def lifespan_async(app: FastAPI):
     db_pool = await create_pool()
     async with db_pool.acquire() as connection:
         yield {"conn": connection}
     await db_pool.close()
-    print("exiting")
 
 
-async def get_db_pool():
-    async with db_pool.acquire() as connection:
-        yield connection
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    conn = create_connection()
+    yield {"conn": conn}
+    conn.close()
 
 
 client = AsyncOpenAI()
@@ -73,7 +73,7 @@ class FollowUpRqt(BaseModel):
 
 
 @app.post("/api/analyze_appointment/")
-async def analyze_appointment(appt_rqt: ApptRqt):
+async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     # TODO: have this read in from an s3 location
     # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
@@ -98,15 +98,12 @@ async def analyze_appointment(appt_rqt: ApptRqt):
     print(f"Context loaded into vector db")
 
     # insert data into postgres db
-    # conn = create_connection()
     try:
-        insert_appointment(conn, params)
+        insert_appointment(request.state.conn, params)
         print(f"Inserted Succesfully")
 
     except Exception as e:
         print(f"Error: {e}")
-    finally:
-        conn.close()
 
     return info
 
@@ -119,10 +116,12 @@ async def query_data(query_rqt: QueryRqt):
 
 
 @app.post("/api/get_follow_ups")
-async def get_follow_ups(followup_rqt: FollowUpRqt):
+async def get_follow_ups(request: Request, followup_rqt: FollowUpRqt):
     tasks = followup_rqt.follow_ups.tasks
     print(f"Received tasks: {tasks}")
-    follow_ups = await get_followup_suggestions(client, followup_rqt.user_id, tasks)
+    follow_ups = await get_followup_suggestions(
+        client, request.state.conn, followup_rqt.user_id, tasks
+    )
     return follow_ups
 
 
