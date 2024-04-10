@@ -2,22 +2,24 @@ import io
 from contextlib import asynccontextmanager
 from typing import Dict
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
-from data_models.appointment_summary import FollowUps
-from db import create_connection, create_pool, insert_appointment
-from queries.open_ai.appointments import AppointmentAnalysis
-from queries.open_ai.follow_ups import get_followup_suggestions
-from vector_db import (
+load_dotenv()
+
+from ..db.relational_db import create_connection, create_pool, insert_appointment
+from ..db.vector_db import (
     build_index,
     embed_model_llamaindex,
     load_documents,
     query_documents,
 )
+from .appointments import AppointmentAnalysis, FollowUps
+from .follow_ups import get_followup_suggestions
 
 METADATA_PARAMS = [
     "user_id",

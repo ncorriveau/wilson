@@ -7,9 +7,9 @@ from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
 
-from data_models.appointment_summary import FollowUps
-from db import CREATE_QUERIES, create_connection, query_db
-from queries.open_ai.appointments import OAIRequest, a_send_rqt, send_rqt
+from ..db.relational_db import CREATE_QUERIES, create_connection, query_db
+from ..models.open_ai.utils import OAIRequest, a_send_rqt
+from .appointments import FollowUps
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 

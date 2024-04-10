@@ -2,12 +2,6 @@ import logging
 import sys
 from typing import List
 
-# from openai import OpenAI
-# from pydantic import BaseModel, Field
-
-# from src.db import CREATE_QUERIES, create_connection, query_db
-# from src.queries.open_ai.appointments import OAIRequest, send_rqt
-
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
 from selenium import webdriver
