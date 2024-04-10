@@ -143,7 +143,6 @@ if __name__ == "__main__":
     client = OpenAI()
     conn = create_connection()
     user_id = 1
-    # this will need to be added dynamically
 
     filter_statement = create_filter_statement(conn, user_id)
     response = send_rqt(client, rqt)
