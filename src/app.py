@@ -1,14 +1,15 @@
 import io
+from contextlib import asynccontextmanager
 from typing import Dict
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
 from data_models.appointment_summary import FollowUps
-from db import create_connection, insert_appointment
+from db import create_connection, create_pool, db_pool, insert_appointment
 from queries.open_ai.appointments import AppointmentAnalysis
 from queries.open_ai.follow_ups import get_followup_suggestions
 from vector_db import (
@@ -25,6 +26,22 @@ METADATA_PARAMS = [
     "appointment_date",
 ]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("starting")
+    db_pool = await create_pool()
+    async with db_pool.acquire() as connection:
+        yield {"conn": connection}
+    await db_pool.close()
+    print("exiting")
+
+
+async def get_db_pool():
+    async with db_pool.acquire() as connection:
+        yield connection
+
+
 client = AsyncOpenAI()
 
 app = FastAPI(
@@ -32,6 +49,7 @@ app = FastAPI(
     description="""A FastAPI application to extract information from patient
     medical documents""",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -80,7 +98,7 @@ async def analyze_appointment(appt_rqt: ApptRqt):
     print(f"Context loaded into vector db")
 
     # insert data into postgres db
-    conn = create_connection()
+    # conn = create_connection()
     try:
         insert_appointment(conn, params)
         print(f"Inserted Succesfully")

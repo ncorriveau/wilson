@@ -2,6 +2,7 @@ import json
 import os
 from typing import Any, Dict, List
 
+import asyncpg
 import psycopg2
 
 password = os.getenv("POSTGRES_PASSWORD")
@@ -136,6 +137,20 @@ CREATE_QUERIES = [
     CREATE_USER_TO_INSURANCE_QUERY,
     CREATE_SPECIALTIES_QUERY,
 ]
+
+
+async def create_pool():
+    return await asyncpg.create_pool(
+        database="postgres",
+        user="postgres",
+        password=password,
+        host="localhost",
+        port="5432",
+    )
+
+
+# This pool will be initialized at app startup
+db_pool = None
 
 
 # TODO: read these from config
