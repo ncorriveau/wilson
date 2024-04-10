@@ -2,7 +2,7 @@ import io
 from contextlib import asynccontextmanager
 from typing import Dict
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field

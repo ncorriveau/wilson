@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from typing import Any, List, Tuple
@@ -73,26 +74,32 @@ Please write a SQL query that will help identify suitable doctors for these foll
 For example, if the task was 'Schedule an appointment with a ENT specialist.', 
 you could write a query that would return a list of ENT specialists using the database schema. 
 
-Before you respond, ENSURE that the query is written following the correct database schema.
+Please add filter the sql query to only return providers that are in the 
+same location as the patient and accept the same insurance as the patient.
+The patients location is = {} and the patients insurance id is = {}.
+
+For insurance id, you can structure your query like the following:
+AND providers.id in (
+                    select provider_id from provider_to_insurance pti 
+		            where pti.insurance_id = "patient_insurance_id"
+
+If insurance_id or location are empty strings, do not include the filter for them in the query. 
+
 """
 
 
-def create_filter_statement(conn, user_id: int) -> str:
+def get_location_and_insurance(conn, user_id: int) -> str:
     get_info = f"SELECT u.location, u.insurance_id FROM users u WHERE u.id = {user_id}"
     result = query_db(conn, get_info)
     logging.info(f"Result from filter statement: {result}")
 
     if not result:
-        return ""  # is this the behavior we want?
+        return "", ""  # is this the behavior we want?
 
     location = result[0][0]
     insurance_id = result[0][1]
 
-    return f""" AND providers.location = '{location}' 
-               AND providers.id in (
-                    select provider_id from provider_to_insurance pti 
-		            where pti.insurance_id = {insurance_id}
-               )"""
+    return location, insurance_id
 
 
 async def get_followup_suggestions(
@@ -100,24 +107,22 @@ async def get_followup_suggestions(
 ) -> list[Any]:
     """Get follow up suggestions for the patient based on the tasks assigned by the physician."""
 
+    location, insurance_id = get_location_and_insurance(conn, user_id)
     rqt = OAIRequest(
         system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
-        user_msg=USER_MSG.format(tasks),
+        user_msg=USER_MSG.format(tasks, location, insurance_id),
         response_schema=FollowUpQueries,
         tools=TOOLS,
         tool_choices=TOOL_CHOICE,
     )
 
-    filter_statement = create_filter_statement(conn, user_id)
     response = await a_send_rqt(client, rqt)
     logging.info(f"Response for SQL Query: {response}")
 
     followup_suggestions = []
     for task in response.tasks:
-        query = task.query.replace(";", "") + filter_statement
-        logging.info(f"Query for Task: {query}")
-
-        result = query_db(conn, query)
+        logging.info(f"Query for Task: {task.query}")
+        result = query_db(conn, task.query)
         logging.info(f"Result: {result}")
 
         followup_suggestions.append(result)
@@ -133,29 +138,15 @@ if __name__ == "__main__":
             {"task": "AMB REF TO GASTROENTEROLOGY."},
         ]
     }
-    rqt = OAIRequest(
-        system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
-        user_msg=USER_MSG.format(tasks),
-        response_schema=FollowUpQueries,
-        tools=TOOLS,
-        tool_choices=TOOL_CHOICE,
-    )
-
-    client = OpenAI()
+    client = AsyncOpenAI()
     conn = create_connection()
     user_id = 1
 
-    filter_statement = create_filter_statement(conn, user_id)
-    response = send_rqt(client, rqt)
+    async def main():
+        followup_suggestions = await get_followup_suggestions(
+            client, conn, user_id, tasks
+        )
+        await client.close()
 
-    logging.info(f"Response: {response}")
-
-    for task in response.tasks:
-        query = task.query + filter_statement
-        logging.info(f"Query for Task: {query}")
-
-        result = query_db(conn, query)
-        logging.info(f"Result: {result}")
-
+    asyncio.run(main())
     conn.close()
-    client.close()
