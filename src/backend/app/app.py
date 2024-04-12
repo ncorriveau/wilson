@@ -1,7 +1,9 @@
 import io
+import json
 from contextlib import asynccontextmanager
 from typing import Dict
 
+import aioredis
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
@@ -14,6 +16,7 @@ load_dotenv()
 from ..db.relational_db import create_connection, create_pool, insert_appointment
 from ..db.vector_db import (
     build_index,
+    create_hash_id,
     embed_model_llamaindex,
     load_documents,
     query_documents,
@@ -45,6 +48,7 @@ async def lifespan(app: FastAPI):
 
 
 client = AsyncOpenAI()
+redis = aioredis.from_url("redis://localhost")
 
 app = FastAPI(
     title="Wilson AI API",
@@ -55,8 +59,21 @@ app = FastAPI(
 )
 
 
-def fake_get_provider_id(provider_info: Dict[str, str]) -> int:
+# TODO: make this real
+def fake_get_provider_id() -> int:
     return 1
+
+
+# A utility to cache data
+async def cache_data(key: str, value: str, expire: int = 3600):
+    async with redis.client() as conn:
+        await conn.set(key, value, ex=expire)
+
+
+# A utility to get cached data
+async def get_cached_data(key: str):
+    async with redis.client() as conn:
+        return await conn.get(key)
 
 
 class ApptRqt(BaseModel):
@@ -79,25 +96,42 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     # TODO: have this read in from an s3 location
     # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
-    appt = AppointmentAnalysis(client, context)
-    info = await appt.a_get_info()
+    text = " ".join([doc.text for doc in context])
+    cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
+    encoded_info = await get_cached_data(cache_key)
+    info = json.loads(encoded_info) if encoded_info else None
 
-    provider_id = fake_get_provider_id(info.get("AppointmentMeta", {}).provider_info)
+    if not info:
+        print(f"Cache miss for {cache_key}")
+        appt = AppointmentAnalysis(client, context)
+        info = await appt.a_get_info()
+        info_serializable = {k: v.model_dump() for k, v in info.items()}
+        encoded_info = json.dumps(info_serializable)
+        await cache_data(cache_key, encoded_info)
+
+    else:
+        print(f"Cache hit for {cache_key}")
+
+    provider_id = fake_get_provider_id()  # TODO: get this from the data
 
     params = {
         "user_id": appt_rqt.user_id,
         "provider_id": provider_id,
         "filename": appt_rqt.data_location,
-        "summary": info.get("Summary", {}).summary,
+        "summary": info.get("Summary", {}),
         "appointment_date": info.get("AppointmentMeta", {}).date,
         "follow_ups": info.get("FollowUps", {}).model_dump_json(),
         "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
     }
 
     # insert data into vector db excludign some keys
-    v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
-    load_documents(context, v_db_params)
-    print(f"Context loaded into vector db")
+    try:
+        v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
+        load_documents(context, v_db_params)
+        print(f"Context loaded into vector db")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     # insert data into postgres db
     try:
@@ -105,7 +139,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         print(f"Inserted Succesfully")
 
     except Exception as e:
-        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
     return info
 
