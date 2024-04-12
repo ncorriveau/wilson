@@ -105,8 +105,8 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         print(f"Cache miss for {cache_key}")
         appt = AppointmentAnalysis(client, context)
         info = await appt.a_get_info()
-        info_serializable = {k: v.model_dump() for k, v in info.items()}
-        encoded_info = json.dumps(info_serializable)
+        info = {k: v.model_dump() for k, v in info.items()}  # make serializable
+        encoded_info = json.dumps(info)
         await cache_data(cache_key, encoded_info)
 
     else:
@@ -118,11 +118,12 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "user_id": appt_rqt.user_id,
         "provider_id": provider_id,
         "filename": appt_rqt.data_location,
-        "summary": info.get("Summary", {}),
-        "appointment_date": info.get("AppointmentMeta", {}).date,
-        "follow_ups": info.get("FollowUps", {}).model_dump_json(),
-        "perscriptions": info.get("Perscriptions", {}).model_dump_json(),
+        "summary": info.get("Summary", {}).get("summary"),
+        "appointment_date": info.get("AppointmentMeta", {}).get("date"),
+        "follow_ups": json.dumps(info.get("FollowUps", {})),
+        "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
+    print(params)
 
     # insert data into vector db excludign some keys
     try:
