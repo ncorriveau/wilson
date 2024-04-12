@@ -123,7 +123,6 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-    print(params)
 
     # insert data into vector db excludign some keys
     try:
@@ -137,7 +136,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     # insert data into postgres db
     try:
         insert_appointment(request.state.conn, params)
-        print(f"Inserted Succesfully")
+        print(f"DB inserted Succesfully")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
