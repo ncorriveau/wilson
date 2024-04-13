@@ -15,10 +15,10 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 class TaskQuery(BaseModel):
-    """A model to represent the database query to run to extract information that will help with the follow up tasks assigned"""
+    """A model to represent the database query to run to extract information that will help with the follow up task assigned"""
 
     query: str = Field(
-        ..., description="SQL query extracting info to assist in follow up tasks."
+        ..., description="SQL query extracting info to assist in follow up task."
     )
 
 
@@ -46,7 +46,7 @@ TOOLS = [
                                 SQL should be written using this database schema:
                                 {database_schema_string}
                                 The following columns only contain the following values:
-                                - specialties.specialty: 'ENT', 'ALLERGIST', 'GASTRO'
+                                - specialties.specialty: 'ENT', 'ALLERGIST', 'GASTRO', 'CARDIO', 'DERM', 'NEURO', 'ORTHO', 'SPORTS', 'SLEEP'
                                 
                                 The query should be returned in plain text, not in JSON.
                                 """,
@@ -68,9 +68,9 @@ Follow the JSON schema provided below to ensure the information is returned in t
 JSON Schema: 
 {}
 """
-USER_MSG = """The physician has assigned the following follow up tasks for the patient:
+USER_MSG = """The physician has assigned the following follow up task for the patient:
 {}
-Please write a SQL query that will help identify suitable doctors for these follow up tasks.
+Please write a SQL query that will help identify suitable doctors for this follow up task.
 For example, if the task was 'Schedule an appointment with a ENT specialist.', 
 you could write a query that would return a list of ENT specialists using the database schema. 
 
@@ -106,38 +106,41 @@ async def get_followup_suggestions(
     client: OpenAI | AsyncOpenAI, conn: connection, user_id: int, tasks: FollowUps
 ) -> list[Any]:
     """Get follow up suggestions for the patient based on the tasks assigned by the physician."""
-
     location, insurance_id = get_location_and_insurance(conn, user_id)
-    rqt = OAIRequest(
-        system_msg=SYSTEM_MSG.format(FollowUpQueries.model_json_schema()),
-        user_msg=USER_MSG.format(tasks, location, insurance_id),
-        response_schema=FollowUpQueries,
-        tools=TOOLS,
-        tool_choices=TOOL_CHOICE,
-    )
-
-    response = await a_send_rqt(client, rqt)
-    logging.info(f"Response for SQL Query: {response}")
-
     followup_suggestions = []
-    for task in response.tasks:
-        logging.info(f"Query for Task: {task.query}")
-        result = query_db(conn, task.query)
-        logging.info(f"Result: {result}")
+    for task in tasks:
+        logging.info(f"Receiving query for follow up task: {task}")
+        rqt = OAIRequest(
+            system_msg=SYSTEM_MSG.format(TaskQuery.model_json_schema()),
+            user_msg=USER_MSG.format(task, location, insurance_id),
+            response_schema=TaskQuery,
+            tools=TOOLS,
+            tool_choices=TOOL_CHOICE,
+        )
 
-        followup_suggestions.append(result)
+        response = await a_send_rqt(client, rqt)
+        logging.info(f"Query for Task: {response.query}\n")
+        result = query_db(conn, response.query)
+        logging.info(f"Result: {result}\n")
+        followup_suggestions.append({"task": task, "result": result})
+
+    # followup_suggestions = []
+    # for task in response.tasks:
+    #     logging.info(f"Query for Task: {task.query}\n")
+    #     # result = query_db(conn, task.query)
+    #     # logging.info(f"Result: {result}\n")
+
+    #     # followup_suggestions.append(result)
 
     return followup_suggestions
 
 
 if __name__ == "__main__":
-    tasks = {
-        "tasks": [
-            {"task": "Consult Allergy and GI."},
-            {"task": "AMB REF TO ALLERGY & CLIN IMM (FPA ASTHMA)."},
-            {"task": "AMB REF TO GASTROENTEROLOGY."},
-        ]
-    }
+    tasks = [
+        {"task": "Referral to ENT specialist for chronic cough."},
+        {"task": "Consider sleep study for persistent insomnia issues."},
+        {"task": "Referral to sports medicine for full evaluation of lower back pain."},
+    ]
     client = AsyncOpenAI()
     conn = create_connection()
     user_id = 1
