@@ -113,7 +113,6 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         print(f"Cache hit for {cache_key}")
 
     provider_id = fake_get_provider_id()  # TODO: get this from the data
-
     params = {
         "user_id": appt_rqt.user_id,
         "provider_id": provider_id,
@@ -123,15 +122,17 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-
-    # insert data into vector db excludign some keys
+    # insert data into vector db excluding some keys
     try:
         v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
         load_documents(context, v_db_params)
         print(f"Context loaded into vector db")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to insert into vector db with error {str(e)}",
+        )
 
     # insert data into postgres db
     try:
@@ -139,7 +140,9 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         print(f"DB inserted Succesfully")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Failed to insert into db with error {str(e)}"
+        )
 
     return info
 

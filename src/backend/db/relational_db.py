@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS insurance (
 
 INSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
-VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_date)s, %(follow)ups)s, %(perscriptions)s)
+VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_date)s, %(follow_ups)s, %(perscriptions)s)
 """
 
 CREATE_USER_QUERY = """
