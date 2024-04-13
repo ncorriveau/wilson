@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..models.open_ai import prompts as oai_prompts
 from ..models.open_ai.utils import OAIRequest, a_send_rqt
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Drug(BaseModel):
@@ -188,7 +188,7 @@ class AppointmentAnalysis:
         ]
         responses = {}
         for rqt in rqts:
-            logging.debug(f"Sending rqt for {rqt.response_schema.__name__}")
+            logger.debug(f"Sending rqt for {rqt.response_schema.__name__}")
             response = await a_send_rqt(self._client, rqt)
             responses[rqt.response_schema.__name__] = response
 
@@ -203,8 +203,8 @@ if __name__ == "__main__":
     context = SimpleDirectoryReader("/Users/nickocorriveau/dev/wilson/data").load_data()
     appt = AppointmentAnalysis(client, context)
 
-    logging.info("Starting timer")
+    logger.info("Starting timer")
     start_time = time.time()
     info = asyncio.run(appt.a_get_info())
     print(info)
-    logging.info(f"Time taken for analysis: {time.time() - start_time}")
+    logger.info(f"Time taken for analysis: {time.time() - start_time}")

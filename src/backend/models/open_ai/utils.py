@@ -5,7 +5,7 @@ from typing import Any, Dict, Type
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class OAIRequest(BaseModel):

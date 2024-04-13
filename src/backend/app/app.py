@@ -1,9 +1,11 @@
 import io
 import json
+import logging.config
 from contextlib import asynccontextmanager
 from typing import Dict
 
 import aioredis
+import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
@@ -23,6 +25,13 @@ from ..db.vector_db import (
 )
 from .appointments import AppointmentAnalysis, FollowUps
 from .follow_ups import get_followup_suggestions
+
+with open("src/backend/configs/logging_config.yaml", "r") as config_file:
+    logging_config = yaml.safe_load(config_file)
+
+logging.config.dictConfig(logging_config)
+
+logger = logging.getLogger(__name__)
 
 METADATA_PARAMS = [
     "user_id",
@@ -64,13 +73,11 @@ def fake_get_provider_id() -> int:
     return 1
 
 
-# A utility to cache data
 async def cache_data(key: str, value: str, expire: int = 3600):
     async with redis.client() as conn:
         await conn.set(key, value, ex=expire)
 
 
-# A utility to get cached data
 async def get_cached_data(key: str):
     async with redis.client() as conn:
         return await conn.get(key)
@@ -102,17 +109,15 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     info = json.loads(encoded_info) if encoded_info else None
 
     if not info:
-        print(f"Cache miss for {cache_key}")
+        logger.debug(f"Cache miss for {cache_key}")
         appt = AppointmentAnalysis(client, context)
         info = await appt.a_get_info()
         info = {k: v.model_dump() for k, v in info.items()}  # make serializable
         encoded_info = json.dumps(info)
         await cache_data(cache_key, encoded_info)
 
-    else:
-        print(f"Cache hit for {cache_key}")
-
     provider_id = fake_get_provider_id()  # TODO: get this from the data
+
     params = {
         "user_id": appt_rqt.user_id,
         "provider_id": provider_id,
@@ -122,11 +127,13 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
+    logger.debug(f"Inserting into db with params: {params}")
+
     # insert data into vector db excluding some keys
     try:
         v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
         load_documents(context, v_db_params)
-        print(f"Context loaded into vector db")
+        logger.info(f"Context loaded into vector db")
 
     except Exception as e:
         raise HTTPException(
@@ -137,7 +144,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     # insert data into postgres db
     try:
         insert_appointment(request.state.conn, params)
-        print(f"DB inserted Succesfully")
+        logger.info(f"DB inserted Succesfully")
 
     except Exception as e:
         raise HTTPException(

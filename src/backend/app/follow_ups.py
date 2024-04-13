@@ -11,7 +11,7 @@ from ..db.relational_db import CREATE_QUERIES, create_connection, query_db
 from ..models.open_ai.utils import OAIRequest, a_send_rqt
 from .appointments import FollowUps
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class TaskQuery(BaseModel):
@@ -91,7 +91,7 @@ If insurance_id or location are empty strings, do not include the filter for the
 def get_location_and_insurance(conn, user_id: int) -> str:
     get_info = f"SELECT u.location, u.insurance_id FROM users u WHERE u.id = {user_id}"
     result = query_db(conn, get_info)
-    logging.info(f"Result from filter statement: {result}")
+    logger.info(f"Result from filter statement: {result}")
 
     if not result:
         return "", ""  # is this the behavior we want?
@@ -109,7 +109,7 @@ async def get_followup_suggestions(
     location, insurance_id = get_location_and_insurance(conn, user_id)
     followup_suggestions = []
     for task in tasks:
-        logging.info(f"Receiving query for follow up task: {task}")
+        logger.info(f"Receiving query for follow up task: {task}")
         rqt = OAIRequest(
             system_msg=SYSTEM_MSG.format(TaskQuery.model_json_schema()),
             user_msg=USER_MSG.format(task, location, insurance_id),
@@ -119,18 +119,10 @@ async def get_followup_suggestions(
         )
 
         response = await a_send_rqt(client, rqt)
-        logging.info(f"Query for Task: {response.query}\n")
+        logger.info(f"Query for Task: {response.query}\n")
         result = query_db(conn, response.query)
-        logging.info(f"Result: {result}\n")
+        logger.info(f"Result: {result}\n")
         followup_suggestions.append({"task": task, "result": result})
-
-    # followup_suggestions = []
-    # for task in response.tasks:
-    #     logging.info(f"Query for Task: {task.query}\n")
-    #     # result = query_db(conn, task.query)
-    #     # logging.info(f"Result: {result}\n")
-
-    #     # followup_suggestions.append(result)
 
     return followup_suggestions
 
