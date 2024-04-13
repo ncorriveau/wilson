@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS insurance (
 
 INSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
+VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_date)s, %(follow)ups)s, %(perscriptions)s)
 """
 
 CREATE_USER_QUERY = """
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS providers (
 """
 INSERT_PROVIDER_QUERY = """
 INSERT INTO providers (first_name, last_name, email, specialty, location)
-VALUES (%s, %s, %s, %s, %s)
+VALUES (%(first_name)s, %(last_name)s, %(email)s, %(specialty)s, %(location)s)
 """
 
 CREATE_PERSCRIPTION_QUERY = """
@@ -180,29 +180,7 @@ def create_table(conn: connection, create_queries: List[str]) -> None:
 
 
 def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            INSERT_APPOINTMENT_QUERY,
-            (
-                params.get("user_id"),
-                params.get("provider_id"),
-                params.get("filename"),
-                params.get("summary"),
-                params.get("appointment_date"),
-                params.get("follow_ups"),
-                params.get("perscriptions"),
-            ),
-        )
-        conn.commit()
-
-    except Exception as e:
-        print(f"Error while inserting data into appointment table {e}")
-        conn.rollback()
-        raise e
-
-    finally:
-        cursor.close()
+    insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
 
 
 def query_db(conn: connection, query: str) -> List[Dict[str, Any]]:
@@ -218,6 +196,22 @@ def query_db(conn: connection, query: str) -> List[Dict[str, Any]]:
         result = f"Error while executing query {e}"
 
     return result
+
+
+def insert_row(conn: connection, query: str, params: Dict[str, str]) -> None:
+    """
+    Helper function to insert rows into a table. Assumes the query is formatted
+    with named arguments.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query, params)
+        conn.commit()
+
+    except Exception as e:
+        print(f"Error while inserting data into table {e}")
+        conn.rollback()
+        raise e
 
 
 if __name__ == "__main__":
