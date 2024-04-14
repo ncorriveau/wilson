@@ -1,16 +1,33 @@
 import logging
 import sys
 import time
-from typing import List, Type
+from enum import Enum
+from typing import Dict, List, Type
 
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..db.relational_db import create_connection, get_specialties
 from ..models.open_ai import prompts as oai_prompts
 from ..models.open_ai.utils import OAIRequest, a_send_rqt
 
 logger = logging.getLogger(__name__)
+
+
+def make_specialty_enum() -> Type[Enum]:
+    """
+    Creates an Enum class for the specialties based off database values.
+    This will return values that are specialty abbreviation: description
+    for each value in the db e.g. SPORTS: Sports Medicine
+    """
+    specialties = get_specialties(create_connection())
+    return Enum("SpecialtyEnum", {k: k for k in specialties.keys()})
+
+
+specialties = get_specialties(create_connection())
+SpecialtyEnum: Enum = make_specialty_enum()
+# SpecialtyEnum = Enum('SpecialtyEnum', {'CARDIOLOGY': 'Cardiology'})
 
 
 class Drug(BaseModel):
@@ -83,6 +100,27 @@ class Summary(BaseModel):
     )
 
 
+class Address(BaseModel):
+    """A model to represent an address."""
+
+    street: str = Field(
+        ...,
+        description="""The street address""",
+    )
+    city: str = Field(
+        ...,
+        description="""The city""",
+    )
+    state: str = Field(
+        ...,
+        description="""The state""",
+    )
+    zip_code: str = Field(
+        ...,
+        description="""The zip code""",
+    )
+
+
 class ProviderInfo(BaseModel):
     """A model to represent the provider's information."""
 
@@ -97,6 +135,16 @@ class ProviderInfo(BaseModel):
     provider_degree: str = Field(
         ...,
         description="""The medical degree of the provider, e.g. MD, DO, NP""",
+    )
+    provider_NPI: str | None = Field(
+        default=None,
+        description="""The NPI number of the provider who wrote the note""",
+    )
+    provider_address: Address | None = Field(
+        default=None, description="""The address of the provider"""
+    )
+    provider_specialty: SpecialtyEnum | None = Field(
+        default=None, description="""The specialty of the provider"""
     )
 
 
@@ -116,6 +164,14 @@ class AppointmentMeta(BaseModel):
                 "provider_first_name": "John",
                 "provider_last_name": "Doe",
                 "provider_degree": "MD",
+                "provider_NPI": "1234567890",
+                "provider_address": {
+                    "street": "123 Main St",
+                    "city": "Anytown",
+                    "state": "NY",
+                    "zip_code": "12345",
+                },
+                "provider_specialty": "ENT",
             },
             "date": "2023-10-10",
         },
@@ -145,10 +201,11 @@ class AppointmentAnalysis:
     def metadata_rqt(self) -> OAIRequest:
         """Extracts the metadata from a given document."""
         system_msg = oai_prompts.build_system_msg(
-            oai_prompts.METADATA_SYS_MSG,
+            oai_prompts.METADATA_SYS_MSG.format(", ".join(specialties.keys())),
             AppointmentMeta.model_json_schema(),
         )
         user_msg = oai_prompts.METADATA_USER_MSG.format(self.context)
+        print(system_msg)
         response_schema = AppointmentMeta
         return OAIRequest(
             system_msg=system_msg, user_msg=user_msg, response_schema=response_schema

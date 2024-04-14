@@ -9,10 +9,15 @@ Provider Note:
 
 METADATA_SYS_MSG = """return metadata about the particular appointment in a valid JSON format. 
 The JSON objects must contain the providers first name, last name, degree (e.g. MD), and the date of the appointment. 
-If you are unsure, please respond with an empty string for each category"""
+If available, also include the provider's NPI number, providers office address, and specialty.
+The providers NPI is a 10 digit unique identifier number, the address should include the street, city, state, and zip code. 
+The specialty should be one of the following: {}. 
 
-METADATA_USER_MSG = """Extract the providers first name, last name, medical degree, and the date of the appointment 
-from the providers note below and return the information in valid JSON format.
+If you are unsure, please respond with a None value for the category"""
+
+METADATA_USER_MSG = """Extract the providers first name, last name, medical degree, NPI, specialty, address, and the date of the appointment 
+from the providers note below and return the information in valid JSON format. The first name, last name, and medical degree should always be
+available. Please only include the NPI, address, and specialty if available.
 Provider Note:
 {}"""
 

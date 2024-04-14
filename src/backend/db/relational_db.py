@@ -122,7 +122,7 @@ CREATE_SPECIALTIES_QUERY = """
 CREATE TABLE IF NOT EXISTS specialties (
     id SERIAL PRIMARY KEY,
     specialty VARCHAR(255) UNIQUE NOT NULL,
-    friendly_name TEXT,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
@@ -214,6 +214,13 @@ def insert_row(conn: connection, query: str, params: Dict[str, str]) -> None:
         raise e
 
 
+def get_specialties(conn: connection) -> Dict[str, str]:
+    query = "SELECT specialty, description FROM specialties"
+    results = query_db(conn, query)
+    specialties = {result[0]: result[1] for result in results}
+    return specialties
+
+
 if __name__ == "__main__":
     conn = create_connection()
     # async def main():
@@ -223,20 +230,20 @@ if __name__ == "__main__":
     #             await conn.execute(CREATE_APPT_TABLE_QUERY)
 
     # asyncio.run(main())
-
-    create_table(
-        conn,
-        [CREATE_SPECIALTIES_QUERY],
-        # [
-        #     CREATE_APPT_TABLE_QUERY,
-        #     # CREATE_COVERAGE_TYPE_QUERY,
-        #     # CREATE_INSURANCE_QUERY,
-        #     # CREATE_USER_QUERY,
-        #     # CREATE_PROVIDER_QUERY,
-        #     # CREATE_PERSCRIPTION_QUERY,
-        #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
-        #     # CREATE_USER_TO_INSURANCE_QUERY,
-        # ],
-    )
-    print(f"Table created successfully")
+    print(get_specialties(conn))
+    # create_table(
+    #     conn,
+    #     [CREATE_SPECIALTIES_QUERY],
+    #     # [
+    #     #     CREATE_APPT_TABLE_QUERY,
+    #     #     # CREATE_COVERAGE_TYPE_QUERY,
+    #     #     # CREATE_INSURANCE_QUERY,
+    #     #     # CREATE_USER_QUERY,
+    #     #     # CREATE_PROVIDER_QUERY,
+    #     #     # CREATE_PERSCRIPTION_QUERY,
+    #     #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
+    #     #     # CREATE_USER_TO_INSURANCE_QUERY,
+    #     # ],
+    # )
+    # print(f"Table created successfully")
     conn.close()
