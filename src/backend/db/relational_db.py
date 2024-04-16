@@ -207,13 +207,18 @@ def insert_provider(conn: connection, params: Dict[str, str]) -> None:
     insert_row(conn, INSERT_PROVIDER_QUERY, params)
 
 
-def query_db(conn: connection, query: str) -> List[Dict[str, Any]]:
+def query_db(
+    conn: connection, query: str, params: Dict[str, str] = None
+) -> List[Dict[str, Any]]:
     """
     Generic helper function to execute queries on the database
     """
     cursor = conn.cursor()
     try:
-        cursor.execute(query)
+        if not params:
+            cursor.execute(query)
+        else:
+            cursor.execute(query, params)
         result = cursor.fetchall()
 
     except Exception as e:
@@ -245,47 +250,115 @@ def get_specialties(conn: connection) -> Dict[str, str]:
     return specialties
 
 
+def get_specialty_id(conn: connection, specialty: str) -> Dict[str, str]:
+    query = f"SELECT specialty_id FROM specialties where specialty = {specialty}"
+    results = query_db(conn, query)
+    return results[0][0]
+
+
+def get_location_id(conn: connection, location_params: Dict[str, str]) -> int:
+    query = """
+    SELECT id FROM location 
+    WHERE street = %(street)s AND 
+    city = %(city)s AND 
+    state = %(state)s AND 
+    zip_code = %(zip_code)s"""
+
+    results = query_db(conn, query, location_params)
+    return results[0][0]
+
+
 def get_provider_id_by_npi(conn: connection, npi: str) -> int:
     query = f"SELECT id FROM providers WHERE npi = {npi}"
     results = query_db(conn, query)
     return results[0][0]
 
 
-def get_provider_id_by_name_and_state(
-    conn: connection, first_name: str, last_name: str, location: str
+def get_provider_id(
+    conn: connection,
+    first_name: str,
+    last_name: str,
+    degree: str,
+    optional_params: Dict[str, Any],
 ) -> int:
+    # THIS FUNCTION NEEDS TO BE REWORKED
+    # WE DO NOT HANDLE THE CASE WHERE WE HAVE SOME INFO AND WE GAIN INFO FROM THE UPLOAD
+    # (e.g. we now have an address where we didn't have before)
+    # IN WHICH CASE WE WOULD LIKE TO UPDATE EXISTING ENTRY VS CREATING A NEW ONE
+
     query = f"""
     SELECT id FROM providers 
     WHERE first_name = {first_name} AND 
-    last_name = {last_name} AND 
-    location = {location}"""
+    last_name = {last_name}"""
+
+    if npi := optional_params.get("npi"):
+        query += f""" AND npi = {npi}"""
+    if phone_number := optional_params.get("phone_number"):
+        query += f""" AND phone_number = {phone_number}"""
+    if email := optional_params.get("email"):
+        query += f""" AND email = {email}"""
+    if location_id := optional_params.get("location_id"):
+        query += f""" AND location_id = {location_id}"""
+    if specialty_id := optional_params.get("specialty_id"):
+        query += f""" AND specialty_id = {specialty_id}"""
+
+    if address := optional_params.get("address"):
+        location_id = get_location_id(conn, optional_params.get("address"))
+        if location_id:
+            query += f""" AND location_id = {location_id}"""
+    if specialty := optional_params.get("specialty"):
+        specialty_id = get_specialty_id(conn, optional_params.get("specialty"))
+        if specialty_id:
+            query += f""" AND specialty_id = {specialty_id}"""
+
     results = query_db(conn, query)
     return results[0][0]
 
 
 if __name__ == "__main__":
-    conn = create_connection()
-    # async def main():
-    #     async with asyncpg.create_pool(**async_pg_params) as pool:
-    #         async with pool.acquire() as conn:
-    #             print(f"Executing statement")
-    #             await conn.execute(CREATE_APPT_TABLE_QUERY)
+    appointtment_meta = {
+        "AppointmentMeta": {
+            "provider_info": {
+                "first_name": "Ella",
+                "last_name": "Leers",
+                "degree": "MD",
+                "email": None,
+                "phone_number": None,
+                "npi": "1609958305",
+                "address": {
+                    "street": "5 Columbus Circle Suite 1802",
+                    "city": "New York",
+                    "state": "NY",
+                    "zip_code": "10019",
+                },
+                "specialty": "PCP",
+            },
+            "date": "2023-09-12",
+        },
+    }
 
-    # asyncio.run(main())
-    print(get_specialties(conn))
-    # create_table(
-    #     conn,
-    #     [CREATE_SPECIALTIES_QUERY],
-    #     # [
-    #     #     CREATE_APPT_TABLE_QUERY,
-    #     #     # CREATE_COVERAGE_TYPE_QUERY,
-    #     #     # CREATE_INSURANCE_QUERY,
-    #     #     # CREATE_USER_QUERY,
-    #     #     # CREATE_PROVIDER_QUERY,
-    #     #     # CREATE_PERSCRIPTION_QUERY,
-    #     #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
-    #     #     # CREATE_USER_TO_INSURANCE_QUERY,
-    #     # ],
-    # )
-    # print(f"Table created successfully")
-    conn.close()
+    # conn = create_connection()
+    # # async def main():
+    # #     async with asyncpg.create_pool(**async_pg_params) as pool:
+    # #         async with pool.acquire() as conn:
+    # #             print(f"Executing statement")
+    # #             await conn.execute(CREATE_APPT_TABLE_QUERY)
+
+    # # asyncio.run(main())
+    # print(get_specialties(conn))
+    # # create_table(
+    # #     conn,
+    # #     [CREATE_SPECIALTIES_QUERY],
+    # #     # [
+    # #     #     CREATE_APPT_TABLE_QUERY,
+    # #     #     # CREATE_COVERAGE_TYPE_QUERY,
+    # #     #     # CREATE_INSURANCE_QUERY,
+    # #     #     # CREATE_USER_QUERY,
+    # #     #     # CREATE_PROVIDER_QUERY,
+    # #     #     # CREATE_PERSCRIPTION_QUERY,
+    # #     #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
+    # #     #     # CREATE_USER_TO_INSURANCE_QUERY,
+    # #     # ],
+    # # )
+    # # print(f"Table created successfully")
+    # conn.close()
