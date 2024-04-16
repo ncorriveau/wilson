@@ -6,9 +6,14 @@ from typing import Dict, List, Type
 
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
+from psycopg2.extensions import connection
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..db.relational_db import create_connection, get_specialties
+from ..db.relational_db import (
+    create_connection,
+    get_provider_id_by_npi,
+    get_specialties,
+)
 from ..models.open_ai import prompts as oai_prompts
 from ..models.open_ai.utils import OAIRequest, a_send_rqt
 
@@ -27,7 +32,6 @@ def make_specialty_enum() -> Type[Enum]:
 
 specialties = get_specialties(create_connection())
 SpecialtyEnum: Enum = make_specialty_enum()
-# SpecialtyEnum = Enum('SpecialtyEnum', {'CARDIOLOGY': 'Cardiology'})
 
 
 class Drug(BaseModel):
@@ -124,28 +128,36 @@ class Address(BaseModel):
 class ProviderInfo(BaseModel):
     """A model to represent the provider's information."""
 
-    provider_first_name: str = Field(
+    first_name: str = Field(
         ...,
         description="""The first name of the provider who wrote the note""",
     )
-    provider_last_name: str = Field(
+    last_name: str = Field(
         ...,
         description="""The last name of the provider who wrote the note""",
     )
-    provider_degree: str = Field(
+    degree: str = Field(
         ...,
         description="""The medical degree of the provider, e.g. MD, DO, NP""",
     )
-    provider_NPI: str | None = Field(
+    email: str | None = Field(
+        default=None,
+        description="""The email of the provider""",
+    )
+    phone_number: str | None = Field(
+        default=None,
+        description="""The phone number of the provider""",
+    )
+    npi: str | None = Field(
         default=None,
         description="""The NPI number of the provider who wrote the note""",
     )
-    provider_address: Address | None = Field(
+    address: Address | None = Field(
         default=None, description="""The address of the provider"""
     )
-    provider_specialty: SpecialtyEnum | None = Field(
+    specialty: SpecialtyEnum | None = Field(
         default=None, description="""The specialty of the provider"""
-    )
+    )  # type: ignore
 
 
 class AppointmentMeta(BaseModel):
@@ -176,6 +188,12 @@ class AppointmentMeta(BaseModel):
             "date": "2023-10-10",
         },
     )
+
+
+def get_provider_id(conn: connection, provider_info: ProviderInfo) -> int:
+    """Helper function to get the provider id from the database."""
+    if provider_info.npi:
+        result = get_provider_id_by_npi(conn, provider_info.npi)
 
 
 class AppointmentAnalysis:

@@ -42,6 +42,21 @@ CREATE TABLE IF NOT EXISTS insurance (
 );
 """
 
+CREATE_LOCATION_QUERY = """
+CREATE TABLE IF NOT EXISTS location (
+    id SERIAL PRIMARY KEY,
+    street TEXT NOT NULL,
+    city TEXT NOT NULL,
+    state TEXT NOT NULL,
+    zip_code TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);"""
+
+INSERT_INTO_LOCATION_QUERY = """
+INSERT INTO location (street, city, state, zip_code)
+VALUES (%(street)s, %(city)s, %(state)s, %(zip_code)s)
+"""
+
 
 INSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
@@ -78,8 +93,8 @@ CREATE TABLE IF NOT EXISTS providers (
 );
 """
 INSERT_PROVIDER_QUERY = """
-INSERT INTO providers (first_name, last_name, email, specialty, location)
-VALUES (%(first_name)s, %(last_name)s, %(email)s, %(specialty)s, %(location)s)
+INSERT INTO providers (first_name, last_name, degree, email, npi, specialty_id, location_id)
+VALUES (%(first_name)s, %(last_name)s, %(degree)s, %(email)s, %(npi)s, %(specialty_id)s, %(location_id)s)
 """
 
 CREATE_PERSCRIPTION_QUERY = """
@@ -154,6 +169,7 @@ CREATE_QUERIES = [
     CREATE_PROVIDER_TO_INSURANCE_QUERY,
     CREATE_USER_TO_INSURANCE_QUERY,
     CREATE_SPECIALTIES_QUERY,
+    CREATE_LOCATION_QUERY,
 ]
 
 
@@ -181,6 +197,14 @@ def create_table(conn: connection, create_queries: List[str]) -> None:
 
 def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
     insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
+
+
+def insert_location(conn: connection, params: Dict[str, str]) -> None:
+    insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
+
+
+def insert_provider(conn: connection, params: Dict[str, str]) -> None:
+    insert_row(conn, INSERT_PROVIDER_QUERY, params)
 
 
 def query_db(conn: connection, query: str) -> List[Dict[str, Any]]:
@@ -219,6 +243,24 @@ def get_specialties(conn: connection) -> Dict[str, str]:
     results = query_db(conn, query)
     specialties = {result[0]: result[1] for result in results}
     return specialties
+
+
+def get_provider_id_by_npi(conn: connection, npi: str) -> int:
+    query = f"SELECT id FROM providers WHERE npi = {npi}"
+    results = query_db(conn, query)
+    return results[0][0]
+
+
+def get_provider_id_by_name_and_state(
+    conn: connection, first_name: str, last_name: str, location: str
+) -> int:
+    query = f"""
+    SELECT id FROM providers 
+    WHERE first_name = {first_name} AND 
+    last_name = {last_name} AND 
+    location = {location}"""
+    results = query_db(conn, query)
+    return results[0][0]
 
 
 if __name__ == "__main__":
