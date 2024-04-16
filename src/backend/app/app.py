@@ -15,7 +15,12 @@ from PyPDF2 import PdfReader
 
 load_dotenv()
 
-from ..db.relational_db import create_connection, create_pool, insert_appointment
+from ..db.relational_db import (
+    create_connection,
+    create_pool,
+    get_provider_id,
+    insert_appointment,
+)
 from ..db.vector_db import (
     build_index,
     create_hash_id,
@@ -116,7 +121,10 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         encoded_info = json.dumps(info)
         await cache_data(cache_key, encoded_info)
 
-    provider_id = fake_get_provider_id()  # TODO: get this from the data
+    provider_id = get_provider_id(
+        request.state.conn, info.get("AppointmentMeta", {}).get("provider_info")
+    )  # TODO: get this from the data
+    logger.info(f"using provider id: {provider_id}")
 
     params = {
         "user_id": appt_rqt.user_id,
@@ -143,6 +151,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
 
     # insert data into postgres db
     try:
+        # TODO: make sure to not add duplicates here
         insert_appointment(request.state.conn, params)
         logger.info(f"DB inserted Succesfully")
 

@@ -1,11 +1,14 @@
 import asyncio
 import json
+import logging
 import os
 from typing import Any, Dict, List
 
 import asyncpg
 import psycopg2
 from psycopg2.extensions import connection
+
+logger = logging.getLogger(__name__)
 
 password = os.getenv("POSTGRES_PASSWORD")
 
@@ -95,6 +98,7 @@ CREATE TABLE IF NOT EXISTS providers (
 INSERT_PROVIDER_QUERY = """
 INSERT INTO providers (first_name, last_name, degree, email, npi, specialty_id, location_id)
 VALUES (%(first_name)s, %(last_name)s, %(degree)s, %(email)s, %(npi)s, %(specialty_id)s, %(location_id)s)
+RETURNING id
 """
 
 CREATE_PERSCRIPTION_QUERY = """
@@ -188,9 +192,7 @@ def create_connection() -> connection:
 def create_table(conn: connection, create_queries: List[str]) -> None:
     cursor = conn.cursor()
     for query in create_queries:
-        print(f"executing query: {query}")
         cursor.execute(query)
-        print(f"Query executed")
         conn.commit()
     cursor.close()
 
@@ -203,8 +205,8 @@ def insert_location(conn: connection, params: Dict[str, str]) -> None:
     insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
 
 
-def insert_provider(conn: connection, params: Dict[str, str]) -> None:
-    insert_row(conn, INSERT_PROVIDER_QUERY, params)
+def insert_provider(conn: connection, params: Dict[str, str]) -> int:
+    return insert_row(conn, INSERT_PROVIDER_QUERY, params)
 
 
 def query_db(
@@ -223,6 +225,7 @@ def query_db(
 
     except Exception as e:
         result = f"Error while executing query {e}"
+        raise e
 
     return result
 
@@ -238,9 +241,11 @@ def insert_row(conn: connection, query: str, params: Dict[str, str]) -> None:
         conn.commit()
 
     except Exception as e:
-        print(f"Error while inserting data into table {e}")
+        logger.error(f"Error while inserting data into table {e}")
         conn.rollback()
         raise e
+
+    return cursor.fetchone()
 
 
 def get_specialties(conn: connection) -> Dict[str, str]:
@@ -251,7 +256,7 @@ def get_specialties(conn: connection) -> Dict[str, str]:
 
 
 def get_specialty_id(conn: connection, specialty: str) -> Dict[str, str]:
-    query = f"SELECT specialty_id FROM specialties where specialty = {specialty}"
+    query = f"SELECT id FROM specialties where specialty = '{specialty}';"
     results = query_db(conn, query)
     return results[0][0]
 
@@ -276,47 +281,50 @@ def get_provider_id_by_npi(conn: connection, npi: str) -> int:
 
 def get_provider_id(
     conn: connection,
-    first_name: str,
-    last_name: str,
-    degree: str,
-    optional_params: Dict[str, Any],
+    params: Dict[str, Any],
 ) -> int:
     # THIS FUNCTION NEEDS TO BE REWORKED
     # WE DO NOT HANDLE THE CASE WHERE WE HAVE SOME INFO AND WE GAIN INFO FROM THE UPLOAD
     # (e.g. we now have an address where we didn't have before)
     # IN WHICH CASE WE WOULD LIKE TO UPDATE EXISTING ENTRY VS CREATING A NEW ONE
-
     query = f"""
     SELECT id FROM providers 
-    WHERE first_name = {first_name} AND 
-    last_name = {last_name}"""
+    WHERE first_name = '{params["first_name"]}'
+    AND last_name = '{params["last_name"]}'"""
 
-    if npi := optional_params.get("npi"):
-        query += f""" AND npi = {npi}"""
-    if phone_number := optional_params.get("phone_number"):
-        query += f""" AND phone_number = {phone_number}"""
-    if email := optional_params.get("email"):
-        query += f""" AND email = {email}"""
-    if location_id := optional_params.get("location_id"):
-        query += f""" AND location_id = {location_id}"""
-    if specialty_id := optional_params.get("specialty_id"):
-        query += f""" AND specialty_id = {specialty_id}"""
+    # optional params
+    if npi := params.get("npi"):
+        query += f""" AND npi = '{npi}'"""
+    if phone_number := params.get("phone_number"):
+        query += f""" AND phone_number = '{phone_number}'"""
+    if email := params.get("email"):
+        query += f""" AND email = '{email}'"""
 
-    if address := optional_params.get("address"):
-        location_id = get_location_id(conn, optional_params.get("address"))
+    if address := params.get("address"):
+        location_id = get_location_id(conn, address)
         if location_id:
             query += f""" AND location_id = {location_id}"""
-    if specialty := optional_params.get("specialty"):
-        specialty_id = get_specialty_id(conn, optional_params.get("specialty"))
+            params["location_id"] = location_id  # adding in case we need to insert
+
+    if specialty := params.get("specialty"):
+        specialty_id = get_specialty_id(conn, specialty)
         if specialty_id:
             query += f""" AND specialty_id = {specialty_id}"""
+            params["specialty_id"] = specialty_id
 
+    logger.info(f"Query to get provider id: {query}")
     results = query_db(conn, query)
+
+    if not results:
+        logger.debug(f"Provider not found, inserting new provider")
+        results = insert_provider(conn, params)  # get id of the row we inserted
+        return results[0]
+
     return results[0][0]
 
 
 if __name__ == "__main__":
-    appointtment_meta = {
+    appointment_meta = {
         "AppointmentMeta": {
             "provider_info": {
                 "first_name": "Ella",
@@ -336,8 +344,13 @@ if __name__ == "__main__":
             "date": "2023-09-12",
         },
     }
+    conn = create_connection()
+    provider_id = get_provider_id(
+        conn, appointment_meta["AppointmentMeta"]["provider_info"]
+    )
+    print(provider_id)
+    conn.close()
 
-    # conn = create_connection()
     # # async def main():
     # #     async with asyncpg.create_pool(**async_pg_params) as pool:
     # #         async with pool.acquire() as conn:
@@ -361,4 +374,3 @@ if __name__ == "__main__":
     # #     # ],
     # # )
     # # print(f"Table created successfully")
-    # conn.close()
