@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS location (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );"""
 
-INSERT_INTO_LOCATION_QUERY = """
+INSERT_LOCATION_QUERY = """
 INSERT INTO location (street, city, state, zip_code)
 VALUES (%(street)s, %(city)s, %(state)s, %(zip_code)s)
 """
@@ -202,11 +202,11 @@ def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
 
 
 def insert_location(conn: connection, params: Dict[str, str]) -> None:
-    insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
+    insert_row(conn, INSERT_LOCATION_QUERY, params)
 
 
 def insert_provider(conn: connection, params: Dict[str, str]) -> int:
-    return insert_row(conn, INSERT_PROVIDER_QUERY, params)
+    return insert_row_return(conn, INSERT_PROVIDER_QUERY, params)
 
 
 def query_db(
@@ -234,6 +234,25 @@ def insert_row(conn: connection, query: str, params: Dict[str, str]) -> None:
     """
     Helper function to insert rows into a table. Assumes the query is formatted
     with named arguments.
+    """
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query, params)
+        conn.commit()
+
+    except Exception as e:
+        logger.error(f"Error while inserting data into table {e}")
+        conn.rollback()
+        raise e
+
+    return
+
+
+def insert_row_return(conn: connection, query: str, params: Dict[str, str]) -> None:
+    """
+    Helper function to insert rows into a table and return the id of the row inserted.
+    Assumes the query is formatted with named arguments, and must have the
+    RETURNING command at the end of the query.
     """
     cursor = conn.cursor()
     try:

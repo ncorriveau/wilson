@@ -73,11 +73,6 @@ app = FastAPI(
 )
 
 
-# TODO: make this real
-def fake_get_provider_id() -> int:
-    return 1
-
-
 async def cache_data(key: str, value: str, expire: int = 3600):
     async with redis.client() as conn:
         await conn.set(key, value, ex=expire)
@@ -109,6 +104,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
     # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     text = " ".join([doc.text for doc in context])
+
     cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
     encoded_info = await get_cached_data(cache_key)
     info = json.loads(encoded_info) if encoded_info else None
@@ -123,8 +119,8 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
 
     provider_id = get_provider_id(
         request.state.conn, info.get("AppointmentMeta", {}).get("provider_info")
-    )  # TODO: get this from the data
-    logger.info(f"using provider id: {provider_id}")
+    )
+    logger.debug(f"Using provider id: {provider_id}")
 
     params = {
         "user_id": appt_rqt.user_id,
@@ -135,7 +131,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-    logger.debug(f"Inserting into db with params: {params}")
+    logger.info(f"Inserting into db with params: {params}")
 
     # insert data into vector db excluding some keys
     try:
