@@ -85,19 +85,19 @@ SELECT_CLOSE_LOCATIONS_QUERY = """
         city,
         state,
         zip_code,
-        latitude,
-        longitude,
+        lat,
+        lng,
         ST_Distance(
-            geography(ST_MakePoint(longitude, latitude)),
+            geography(ST_MakePoint(lng, lat)),
             geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s))
         ) AS distance
     FROM
         location
     WHERE
         ST_DWithin(
-            geography(ST_MakePoint(longitude, latitude)),
+            geography(ST_MakePoint(lng, lat)),
             geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s)),
-            10000  -- Distance in meters (10 km)
+            %(distance)s
         )
     ORDER BY
         distance ASC;
@@ -252,6 +252,16 @@ def insert_location(conn: connection, params: Dict[str, str]) -> None:
     params["lng"] = lng
 
     insert_row(conn, INSERT_LOCATION_QUERY, params)
+
+
+def select_close_locations(
+    conn: connection, lat: float, lng: float
+) -> List[Dict[str, Any]]:
+    """
+    retrieve locations with in 10km of the input latitude and longitude
+    """
+    params = {"input_latitude": lat, "input_longitude": lng, "distance": 10000}
+    return query_db(conn, SELECT_CLOSE_LOCATIONS_QUERY, params)
 
 
 def insert_provider(conn: connection, params: Dict[str, str]) -> int:
@@ -416,6 +426,8 @@ if __name__ == "__main__":
     address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
     lat, lng = geocode_address(**address)
     print(lat, lng)
+    results = select_close_locations(conn, lat, lng)
+    print(results)
     # # async def main():
     # #     async with asyncpg.create_pool(**async_pg_params) as pool:
     # #         async with pool.acquire() as conn:
