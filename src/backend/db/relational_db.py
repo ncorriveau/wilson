@@ -1,16 +1,34 @@
-import asyncio
-import json
 import logging
 import os
 from typing import Any, Dict, List
 
 import asyncpg
 import psycopg2
+import requests
 from psycopg2.extensions import connection
 
 logger = logging.getLogger(__name__)
 
 password = os.getenv("POSTGRES_PASSWORD")
+
+
+def geocode_address(street, city, state, zip_code):
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    country = "US"  # assume this is true for now...
+
+    address = f"{street}, {city}, {state}, {zip_code}, {country}"
+    response = requests.get(
+        "https://maps.googleapis.com/maps/api/geocode/json",
+        params={"address": address, "key": api_key},
+    )
+    response.raise_for_status()
+    results = response.json()["results"]
+    if results:
+        location = results[0]["geometry"]["location"]
+        return location["lat"], location["lng"]
+    else:
+        return None, None
+
 
 CREATE_APPT_TABLE_QUERY = """
 CREATE TABLE IF NOT EXISTS appointment (
@@ -56,10 +74,34 @@ CREATE TABLE IF NOT EXISTS location (
 );"""
 
 INSERT_LOCATION_QUERY = """
-INSERT INTO location (street, city, state, zip_code)
-VALUES (%(street)s, %(city)s, %(state)s, %(zip_code)s)
+INSERT INTO location (street, city, state, zip_code, lat, lng)
+VALUES (%(street)s, %(city)s, %(state)s, %(zip_code)s, %(lat)s, %(lng)s)
 """
 
+SELECT_CLOSE_LOCATIONS_QUERY = """
+    SELECT
+        id,
+        street,
+        city,
+        state,
+        zip_code,
+        latitude,
+        longitude,
+        ST_Distance(
+            geography(ST_MakePoint(longitude, latitude)),
+            geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s))
+        ) AS distance
+    FROM
+        location
+    WHERE
+        ST_DWithin(
+            geography(ST_MakePoint(longitude, latitude)),
+            geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s)),
+            10000  -- Distance in meters (10 km)
+        )
+    ORDER BY
+        distance ASC;
+    """
 
 INSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
@@ -202,6 +244,13 @@ def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
 
 
 def insert_location(conn: connection, params: Dict[str, str]) -> None:
+    # assuming we can pull regular address from appointment doc,
+    # we want to get the lat, lng and then insert into database
+
+    lat, lng = geocode_address(**params)
+    params["lat"] = lat
+    params["lng"] = lng
+
     insert_row(conn, INSERT_LOCATION_QUERY, params)
 
 
@@ -353,10 +402,10 @@ if __name__ == "__main__":
                 "phone_number": None,
                 "npi": "1609958305",
                 "address": {
-                    "street": "5 Columbus Circle Suite 1802",
+                    "street": "2 Northside Piers Apt 3C",
                     "city": "New York",
-                    "state": "NY",
-                    "zip_code": "10019",
+                    "state": "Brooklyn",
+                    "zip_code": "11249",
                 },
                 "specialty": "PCP",
             },
@@ -364,12 +413,9 @@ if __name__ == "__main__":
         },
     }
     conn = create_connection()
-    provider_id = get_provider_id(
-        conn, appointment_meta["AppointmentMeta"]["provider_info"]
-    )
-    print(provider_id)
-    conn.close()
-
+    address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
+    lat, lng = geocode_address(**address)
+    print(lat, lng)
     # # async def main():
     # #     async with asyncpg.create_pool(**async_pg_params) as pool:
     # #         async with pool.acquire() as conn:
