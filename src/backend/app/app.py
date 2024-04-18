@@ -131,7 +131,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-    logger.info(f"Inserting into db with params: {params}")
+    logger.debug(f"Inserting into db with params: {params}")
 
     # insert data into vector db excluding some keys
     try:

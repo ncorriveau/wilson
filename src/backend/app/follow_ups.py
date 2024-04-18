@@ -74,9 +74,9 @@ Please write a SQL query that will help identify suitable doctors for this follo
 For example, if the task was 'Schedule an appointment with a ENT specialist.', 
 you could write a query that would return a list of ENT specialists using the database schema. 
 
-Please add filter the sql query to only return providers that are in the 
-same location as the patient and accept the same insurance as the patient.
-The patients location is = {} and the patients insurance id is = {}.
+Please filter the sql query to only return providers that are in the 
+same city as the patient and accept the same insurance as the patient.
+The patients city is = {} and the patients insurance id is = {}.
 
 For insurance id, you can structure your query like the following:
 AND providers.id in (

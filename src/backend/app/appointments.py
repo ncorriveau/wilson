@@ -1,9 +1,9 @@
 import logging
-import sys
 import time
 from enum import Enum
 from typing import Any, Dict, List, Type
 
+import requests
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
@@ -159,7 +159,7 @@ class ProviderInfo(BaseModel):
     # we are using this so we can explicitly pass in legal values to the prompt
     # in a dynamic manner. however, we just want the actual value (not the enum)
     # return from the llm
-    specialty: SpecialtyEnum | None = Field(
+    specialty: SpecialtyEnum | None = Field(  # type: ignore
         default=None, description="""The specialty of the provider"""
     )
 
