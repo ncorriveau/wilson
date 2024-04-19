@@ -103,6 +103,37 @@ SELECT_CLOSE_LOCATIONS_QUERY = """
         distance ASC;
     """
 
+SELECT_RELEVANT_PROVIDERS = """
+    SELECT
+        p.first_name,
+        p.last_name, 
+        s.description,
+        l.street,
+        l.city,
+        l.state,
+        l.zip_code,
+        ST_Distance(
+            geography(ST_MakePoint(lng, lat)),
+            geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s))
+        ) AS distance
+    FROM
+        providers p
+    left join 
+        location l on p.location_id = l.id
+    left join 
+        specialties s on p.specialty_id = s.id
+    WHERE
+        ST_DWithin(
+            geography(ST_MakePoint(lng, lat)),
+            geography(ST_MakePoint(%(input_longitude)s, %(input_latitude)s)),
+            %(distance)s
+        )
+        AND s.specialty in (%(specialty)s)
+    ORDER BY
+        distance ASC;
+    """
+
+
 INSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
 VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_date)s, %(follow_ups)s, %(perscriptions)s)
@@ -262,6 +293,24 @@ def select_close_locations(
     """
     params = {"input_latitude": lat, "input_longitude": lng, "distance": 10000}
     return query_db(conn, SELECT_CLOSE_LOCATIONS_QUERY, params)
+
+
+def select_relevant_providers(
+    conn: connection,
+    lat: float,
+    lng: float,
+    specialty: str,
+) -> List[Dict[str, Any]]:
+    """
+    retrieve locations with in 10km of the input latitude and longitude
+    """
+    params = {
+        "input_latitude": lat,
+        "input_longitude": lng,
+        "distance": 10000,
+        "specialty": specialty,
+    }
+    return query_db(conn, SELECT_RELEVANT_PROVIDERS, params)
 
 
 def insert_provider(conn: connection, params: Dict[str, str]) -> int:
@@ -426,7 +475,7 @@ if __name__ == "__main__":
     address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
     lat, lng = geocode_address(**address)
     print(lat, lng)
-    results = select_close_locations(conn, lat, lng)
+    results = select_relevant_providers(conn, lat, lng, "ENT")
     print(results)
     # # async def main():
     # #     async with asyncpg.create_pool(**async_pg_params) as pool:
