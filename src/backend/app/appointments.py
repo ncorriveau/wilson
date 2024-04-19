@@ -197,12 +197,6 @@ class AppointmentMeta(BaseModel):
     )
 
 
-def get_provider_id(conn: connection, provider_info: ProviderInfo) -> int:
-    """Helper function to get the provider id from the database."""
-    if provider_info.npi:
-        result = get_provider_id_by_npi(conn, provider_info.npi)
-
-
 class AppointmentAnalysis:
 
     def __init__(self, client: OpenAI | AsyncOpenAI, context: str):
@@ -230,7 +224,6 @@ class AppointmentAnalysis:
             AppointmentMeta.model_json_schema(),
         )
         user_msg = oai_prompts.METADATA_USER_MSG.format(self.context)
-        print(system_msg)
         response_schema = AppointmentMeta
         return OAIRequest(
             system_msg=system_msg, user_msg=user_msg, response_schema=response_schema
