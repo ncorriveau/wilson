@@ -1,3 +1,4 @@
+import datetime
 import logging
 import time
 from enum import Enum
@@ -174,8 +175,15 @@ class AppointmentMeta(BaseModel):
         ..., description="""Information about the provider"""
     )
     date: str = Field(
-        ..., description="""The date of the appointment, in YYYY-MM-DD format"""
+        ..., description="""The date of the appointment, in YYYY-MM-DD H:M format"""
     )
+
+    @validator("date")
+    def validate_date(cls, val):
+        try:
+            return datetime.strptime(val, "%Y-%m-%d %H:%M").strftime("%Y-%m-%d %H:%M")
+        except ValueError:
+            raise ValueError("Incorrect date format, should be YYYY-MM-DD H:M")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -192,7 +200,7 @@ class AppointmentMeta(BaseModel):
                 },
                 "provider_specialty": "ENT",
             },
-            "date": "2023-10-10",
+            "date": "2023-10-10 20:16",
         },
     )
 
