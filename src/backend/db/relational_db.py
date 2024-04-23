@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS appointment (
     provider_id INT NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
     filename TEXT NOT NULL,
     summary TEXT,
-    appointment_date DATE,
+    appointment_datetime TIMESTAMP,
     follow_ups JSONB,
     perscriptions JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -133,10 +133,18 @@ SELECT_RELEVANT_PROVIDERS = """
         distance ASC;
     """
 
-
-INSERT_APPOINTMENT_QUERY = """
-INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_date, follow_ups, perscriptions)
-VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_date)s, %(follow_ups)s, %(perscriptions)s)
+# looking at unique user/provider/appointment date combos is an assumption that needs to be revisited
+# this would be strictly correct if we had a start time instead of a YYYYMMDD format
+# not doing any sort of hashed doc id because in theory, we should have the same take aways
+UPSERT_APPOINTMENT_QUERY = """
+INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_datetime, follow_ups, perscriptions)
+VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_datetime)s, %(follow_ups)s, %(perscriptions)s)
+ON CONFLICT (user_id, provider_id, appointment_datetime)
+DO UPDATE SET
+    filename = EXCLUDED.filename, 
+    summary = EXCLUDED.summary, 
+    follow_ups = EXCLUDED.follow_ups, 
+    perscriptions = EXCLUDED.perscriptions
 """
 
 CREATE_USER_QUERY = """
@@ -270,8 +278,8 @@ def create_table(conn: connection, create_queries: List[str]) -> None:
     cursor.close()
 
 
-def insert_appointment(conn: connection, params: Dict[str, str]) -> None:
-    insert_row(conn, INSERT_APPOINTMENT_QUERY, params)
+def upsert_appointment(conn: connection, params: Dict[str, str]) -> None:
+    insert_row(conn, UPSERT_APPOINTMENT_QUERY, params)
 
 
 def insert_location(conn: connection, params: Dict[str, str]) -> None:

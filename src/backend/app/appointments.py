@@ -1,6 +1,6 @@
-import datetime
 import logging
 import time
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Type
 
@@ -174,11 +174,11 @@ class AppointmentMeta(BaseModel):
     provider_info: ProviderInfo = Field(
         ..., description="""Information about the provider"""
     )
-    date: str = Field(
+    datetime: str = Field(
         ..., description="""The date of the appointment, in YYYY-MM-DD H:M format"""
     )
 
-    @validator("date")
+    @validator("datetime")
     def validate_date(cls, val):
         try:
             return datetime.strptime(val, "%Y-%m-%d %H:%M").strftime("%Y-%m-%d %H:%M")
@@ -200,7 +200,7 @@ class AppointmentMeta(BaseModel):
                 },
                 "provider_specialty": "ENT",
             },
-            "date": "2023-10-10 20:16",
+            "datetime": "2023-10-10 20:16",
         },
     )
 
