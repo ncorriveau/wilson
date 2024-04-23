@@ -19,7 +19,7 @@ from ..db.relational_db import (
     create_connection,
     create_pool,
     get_provider_id,
-    insert_appointment,
+    upsert_appointment,
 )
 from ..db.vector_db import (
     build_index,
@@ -117,6 +117,8 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         encoded_info = json.dumps(info)
         await cache_data(cache_key, encoded_info)
 
+    logger.info(f"info = {info}")
+
     provider_id = get_provider_id(
         request.state.conn, info.get("AppointmentMeta", {}).get("provider_info")
     )
@@ -127,11 +129,11 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "provider_id": provider_id,
         "filename": appt_rqt.data_location,
         "summary": info.get("Summary", {}).get("summary"),
-        "appointment_date": info.get("AppointmentMeta", {}).get("date"),
+        "appointment_datetime": info.get("AppointmentMeta", {}).get("datetime"),
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-    logger.debug(f"Inserting into db with params: {params}")
+    logger.info(f"Inserting into db with params: {params}")
 
     # insert data into vector db excluding some keys
     try:
@@ -147,8 +149,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
 
     # insert data into postgres db
     try:
-        # TODO: make sure to not add duplicates here
-        insert_appointment(request.state.conn, params)
+        upsert_appointment(request.state.conn, params)
         logger.info(f"DB inserted Succesfully")
 
     except Exception as e:
