@@ -20,18 +20,27 @@ logger = logging.getLogger(__name__)
 def get_npi(provider_info: Dict[str, any]) -> str:
     """given a providers name / specialty / etc pull npi from the npi database"""
 
+    # if we don't have a location there will still be a location attribute
+    # it will just be none
+    if location := provider_info["location"]:
+        city = location.get("city")
+        state = location.get("state")
+    else:
+        city = None
+        state = None
+
     # structure request to npi database
     params_list = [
         {
             "first_name": provider_info.get("first_name"),
             "last_name": provider_info.get("last_name"),
-            "city": provider_info.get("location", {}).get("city"),
-            "state": provider_info.get("location", {}).get("state"),
+            "city": city,
+            "state": state,
         },
         {
             "first_name": provider_info.get("first_name"),
             "last_name": provider_info.get("last_name"),
-            "state": provider_info.get("location", {}).get("state"),
+            "state": state,
         },
         {
             "first_name": provider_info.get("first_name"),
@@ -39,11 +48,9 @@ def get_npi(provider_info: Dict[str, any]) -> str:
         },
     ]
     for params in params_list:
-        # return npi if there is a single one
         response = requests.get(NPI_URL, params=params)
         if response.json()["results"]:
             # TODO figure out how we want to handle multiple results
-            # right now we will just return the first one
             return response.json()["results"][0]["number"]
 
     return None
