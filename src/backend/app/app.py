@@ -135,9 +135,7 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "follow_ups": json.dumps(info.get("FollowUps", {})),
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
-    logger.info(f"Inserting into db with params: {params}")
 
-    # insert data into vector db excluding some keys
     try:
         v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
         load_documents(context, v_db_params)
@@ -149,7 +147,6 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
             detail=f"Failed to insert into vector db with error {str(e)}",
         )
 
-    # insert data into postgres db
     try:
         upsert_appointment(request.state.conn, params)
         logger.info(f"DB inserted Succesfully")
