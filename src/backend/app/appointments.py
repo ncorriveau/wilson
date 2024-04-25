@@ -105,8 +105,8 @@ class Summary(BaseModel):
     )
 
 
-class Address(BaseModel):
-    """A model to represent an address."""
+class Location(BaseModel):
+    """A model to represent the location of the appointment"""
 
     street: str = Field(
         ...,
@@ -153,13 +153,12 @@ class ProviderInfo(BaseModel):
         default=None,
         description="""The NPI number of the provider who wrote the note""",
     )
-    address: Address | None = Field(
-        default=None, description="""The address of the provider"""
+    location: Location | None = Field(
+        default=None, description="""The location of the appointment"""
     )
 
     # we are using this so we can explicitly pass in legal values to the prompt
     # in a dynamic manner. however, we just want the actual value (not the enum)
-    # return from the llm
     specialty: SpecialtyEnum | None = Field(  # type: ignore
         default=None, description="""The specialty of the provider"""
     )
