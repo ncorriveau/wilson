@@ -7,7 +7,7 @@ from bson.objectid import ObjectId
 from pymongo import MongoClient
 from pymongo.collection import Collection, UpdateResult
 
-# from ..app.appointments import ProviderInfo
+from .relational_db import geocode_address
 
 SUGGESTION_MAX_DISTANCE = 10000  # distance in meters
 NPI_URL = "https://npiregistry.cms.hhs.gov/api/?version=2.1"
@@ -64,6 +64,10 @@ def upsert_provider(
     collection: Collection, provider_info: Dict[str, Any]
 ) -> UpdateResult:
     """insert or update provider info in db"""
+    if provider_info["location"]:
+        lat, lng = geocode_address(provider_info["location"])
+        provider_info["location"]["coordinates"] = {"lat": lat, "long": lng}
+
     result = collection.update_one(
         {"npi": provider_info["npi"]},
         {
@@ -80,26 +84,22 @@ def upsert_provider(
         },
         upsert=True,
     )
+    logger.info(f"Upserted provider: {provider_info['npi']}")
     return result
 
 
-def get_provider_id(collection: Collection, provider_info: Dict[str, Any]) -> str:
+async def get_provider_id(collection: Collection, provider_info: Dict[str, Any]) -> str:
     """
     This function implements a waterfall logic in order to try and locate
     the npi based on provider info.
-        1) If the npi is present in the info (e.g. extracted from the doc) just return taht
-        2) If the npi is not present, try to find the provider in the db
+        1) If the npi is not present, try to find the provider in the db
         based on first name, last name, and specialty
-        3) If the provider is not found in the db, query the npi db to get the npi
+        2) If the provider is not found in the db, query the npi db to get the npi
             If we successfully find one, we want to insert the provider into the db
         else will return None.
     Future work may include handing multiple results to an llm to decide which one
     to suggest to the user and have user confirm.
     """
-    if provider_info.get("npi"):
-        logger.info(f"Found NPI in provider_info: {provider_info['npi']}")
-        return provider_info["npi"]
-
     provider = collection.find_one(
         {
             "first_name": provider_info["first_name"],
@@ -117,11 +117,6 @@ def get_provider_id(collection: Collection, provider_info: Dict[str, Any]) -> st
         f"Querying npi db for provider: {provider_info['first_name']} {provider_info['last_name']}"
     )
     provider_info["npi"] = get_npi(provider_info)
-
-    if provider_info["npi"]:
-        logger.info(f"Provider not in DB. Inserting NPI: {provider_info['npi']}")
-        upsert_provider(collection, provider_info)
-
     return provider_info["npi"]
 
 
