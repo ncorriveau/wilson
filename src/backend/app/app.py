@@ -8,7 +8,15 @@ from typing import Dict
 import aioredis
 import yaml
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
@@ -17,7 +25,7 @@ from PyPDF2 import PdfReader
 
 load_dotenv()
 
-from ..db.nosql_db import get_provider_by_npi, get_provider_id
+from ..db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
 from ..db.relational_db import create_connection, create_pool, upsert_appointment
 from ..db.vector_db import (
     build_index,
@@ -84,6 +92,30 @@ async def get_cached_data(key: str):
         return await conn.get(key)
 
 
+def insert_vector_db(context, params):
+    try:
+        v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
+        load_documents(context, v_db_params)
+        logger.info(f"Context loaded into vector db")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to insert into vector db with error {str(e)}",
+        )
+
+
+def insert_db(request: Request, params):
+    try:
+        upsert_appointment(request.state.conn, params)
+        logger.info(f"DB inserted Succesfully")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to insert into db with error {str(e)}"
+        )
+
+
 class ApptRqt(BaseModel):
     user_id: int = Field(..., description="The user id of the patient.")
     data_location: str = Field(..., description="The location of the data to analyze.")
@@ -100,7 +132,9 @@ class FollowUpRqt(BaseModel):
 
 
 @app.post("/api/analyze_appointment/")
-async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
+async def analyze_appointment(
+    request: Request, appt_rqt: ApptRqt, background_tasks: BackgroundTasks
+):
     # TODO: have this read in from an s3 location
     # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
@@ -115,20 +149,25 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         appt = AppointmentAnalysis(client, context)
         info = await appt.a_get_info()
         info = {k: v.model_dump() for k, v in info.items()}  # make serializable
-        encoded_info = json.dumps(info)
-        await cache_data(cache_key, encoded_info)
+        await cache_data(cache_key, json.dumps(info))
 
     logger.info(f"info = {pprint(info)}")
 
-    # we need to add coordinates here somehow
-    provider_id = get_provider_id(
-        provider_collection, info.get("AppointmentMeta", {}).get("provider_info")
-    )
-    logger.debug(f"Using provider npi: {provider_id}")
+    provider_info = info.get("AppointmentMeta", {}).get("provider_info")
+    if not provider_info.get("npi"):
+        provider_info["npi"] = await get_provider_id(provider_collection, provider_info)
+    else:
+        provider_info["npi"] = provider_info.get("npi")
 
+    existing_record = get_provider_by_npi(provider_collection, provider_info["npi"])
+    if not existing_record:
+        logger.info(f"Provider not found in db - inserting record")
+        background_tasks.add_task(upsert_provider, provider_collection, provider_info)
+
+    # by here we need to have information verified
     params = {
         "user_id": appt_rqt.user_id,
-        "provider_id": provider_id,  # this is going to be NPI
+        "provider_id": provider_info["npi"],  # this is going to be NPI
         "filename": appt_rqt.data_location,
         "summary": info.get("Summary", {}).get("summary"),
         "appointment_datetime": info.get("AppointmentMeta", {}).get("datetime"),
@@ -136,25 +175,8 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         "perscriptions": json.dumps(info.get("Perscriptions", {})),
     }
 
-    try:
-        v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
-        load_documents(context, v_db_params)
-        logger.info(f"Context loaded into vector db")
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to insert into vector db with error {str(e)}",
-        )
-
-    try:
-        upsert_appointment(request.state.conn, params)
-        logger.info(f"DB inserted Succesfully")
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to insert into db with error {str(e)}"
-        )
+    background_tasks.add_task(insert_db, request, params)
+    background_tasks.add_task(insert_vector_db, context, params)
 
     return info
 
