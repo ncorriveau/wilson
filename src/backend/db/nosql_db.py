@@ -1,3 +1,4 @@
+import logging
 import pprint
 from typing import Any, Dict
 
@@ -11,6 +12,10 @@ from pymongo.collection import Collection, UpdateResult
 SUGGESTION_MAX_DISTANCE = 10000  # distance in meters
 NPI_URL = "https://npiregistry.cms.hhs.gov/api/?version=2.1"
 
+logger = logging.getLogger(__name__)
+
+# TODO: we need to add specialty in our queries sand have a map from our db to the npi db for taxonomies
+
 
 def get_npi(provider_info: Dict[str, any]) -> str:
     """given a providers name / specialty / etc pull npi from the npi database"""
@@ -18,28 +23,28 @@ def get_npi(provider_info: Dict[str, any]) -> str:
     # structure request to npi database
     params_list = [
         {
-            "first_name": provider_info["first_name"],
-            "last_name": provider_info["last_name"],
-            "city": provider_info["location"]["city"],
-            "state": provider_info["location"]["state"],
+            "first_name": provider_info.get("first_name"),
+            "last_name": provider_info.get("last_name"),
+            "city": provider_info.get("location", {}).get("city"),
+            "state": provider_info.get("location", {}).get("state"),
         },
         {
-            "first_name": provider_info["first_name"],
-            "last_name": provider_info["last_name"],
-            "state": provider_info["location"]["state"],
+            "first_name": provider_info.get("first_name"),
+            "last_name": provider_info.get("last_name"),
+            "state": provider_info.get("location", {}).get("state"),
         },
         {
-            "first_name": provider_info["first_name"],
-            "last_name": provider_info["last_name"],
+            "first_name": provider_info.get("first_name"),
+            "last_name": provider_info.get("last_name"),
         },
     ]
     for params in params_list:
         # return npi if there is a single one
         response = requests.get(NPI_URL, params=params)
-        if response.results:
+        if response.json()["results"]:
             # TODO figure out how we want to handle multiple results
             # right now we will just return the first one
-            return response.results[0]["number"]
+            return response.json()["results"][0]["number"]
 
     return None
 
@@ -56,6 +61,8 @@ def upsert_provider(
         {"npi": provider_info["npi"]},
         {
             "$set": {
+                "first_name": provider_info["first_name"],
+                "last_name": provider_info["last_name"],
                 "email": provider_info["email"],
                 "phone_number": provider_info["phone_number"],
             },
@@ -70,10 +77,22 @@ def upsert_provider(
 
 
 def get_provider_id(collection: Collection, provider_info: Dict[str, Any]) -> str:
+    """
+    This function implements a waterfall logic in order to try and locate
+    the npi based on provider info.
+        1) If the npi is present in the info (e.g. extracted from the doc) just return taht
+        2) If the npi is not present, try to find the provider in the db
+        based on first name, last name, and specialty
+        3) If the provider is not found in the db, query the npi db to get the npi
+            If we successfully find one, we want to insert the provider into the db
+        else will return None.
+    Future work may include handing multiple results to an llm to decide which one
+    to suggest to the user and have user confirm.
+    """
     if provider_info.get("npi"):
+        logger.info(f"Found NPI in provider_info: {provider_info['npi']}")
         return provider_info["npi"]
 
-    # if no npi, try to get it from the db
     provider = collection.find_one(
         {
             "first_name": provider_info["first_name"],
@@ -84,11 +103,18 @@ def get_provider_id(collection: Collection, provider_info: Dict[str, Any]) -> st
 
     # TODO: if there are multiple matches, maybe we should return all of them and ask the user to pick one
     if provider:
+        logger.info(f"Found provider in db: {provider['npi']}")
         return provider["npi"]
 
-    # if no provider found, insert the provider -> need to get npi first
+    logger.info(
+        f"Querying npi db for provider: {provider_info['first_name']} {provider_info['last_name']}"
+    )
     provider_info["npi"] = get_npi(provider_info)
-    upsert_provider(collection, provider_info)
+
+    if provider_info["npi"]:
+        logger.info(f"Provider not in DB. Inserting NPI: {provider_info['npi']}")
+        upsert_provider(collection, provider_info)
+
     return provider_info["npi"]
 
 
@@ -137,20 +163,20 @@ if __name__ == "__main__":
     # note that the document 'schema' will contain a list of locations and insurances but on any given
     # update we will just be providing one from the incoming document
     provider_info = {
-        "npi": "1609958305",
+        # "npi": "1447331368",
         "first_name": "Christine",
         "last_name": "Corriveau",
         "degree": "MD",
         "email": None,
         "phone_number": None,
-        "specialty": "PCP",
+        "specialty": "PEDIATRIC",
         # more complex info
         "location": {
-            "name": "One Medical",
-            "street": "5 Columbus Circle Suite 1802",
+            "name": "Children's National Hospital",
+            "street": "111 Michigan Ave NW",
             "city": "WASHINGTON",
             "state": "DC",
-            "zip_code": "10019",
+            "zip_code": "20010-2978",
             "coordinates": {
                 "lat": 40.766668,
                 "long": -73.9814608,
@@ -171,5 +197,6 @@ if __name__ == "__main__":
     # results = get_relevant_providers(providers, patient_info, "PCP")
     # for result in results:
     #     pprint.pprint(result)
-    results = get_npi(provider_info)
-    pprint.pprint(results)
+    # results = get_provider_id(providers, provider_info)
+    doc = providers.find_one({"npi": "1609958305"})
+    pprint.pprint(doc)

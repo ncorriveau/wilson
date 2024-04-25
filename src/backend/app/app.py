@@ -2,6 +2,7 @@ import io
 import json
 import logging.config
 from contextlib import asynccontextmanager
+from pprint import pprint
 from typing import Dict
 
 import aioredis
@@ -11,16 +12,13 @@ from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+from pymongo import MongoClient
 from PyPDF2 import PdfReader
 
 load_dotenv()
 
-from ..db.relational_db import (
-    create_connection,
-    create_pool,
-    get_provider_id,
-    upsert_appointment,
-)
+from ..db.nosql_db import get_provider_by_npi, get_provider_id
+from ..db.relational_db import create_connection, create_pool, upsert_appointment
 from ..db.vector_db import (
     build_index,
     create_hash_id,
@@ -63,6 +61,9 @@ async def lifespan(app: FastAPI):
 
 client = AsyncOpenAI()
 redis = aioredis.from_url("redis://localhost")
+mongo_db_client = MongoClient("mongodb://localhost:27017/")
+db = mongo_db_client["wilson_ai"]
+provider_collection = db.providers
 
 app = FastAPI(
     title="Wilson AI API",
@@ -117,16 +118,17 @@ async def analyze_appointment(request: Request, appt_rqt: ApptRqt):
         encoded_info = json.dumps(info)
         await cache_data(cache_key, encoded_info)
 
-    logger.info(f"info = {info}")
+    logger.info(f"info = {pprint(info)}")
 
+    # we need to add coordinates here somehow
     provider_id = get_provider_id(
-        request.state.conn, info.get("AppointmentMeta", {}).get("provider_info")
+        provider_collection, info.get("AppointmentMeta", {}).get("provider_info")
     )
-    logger.debug(f"Using provider id: {provider_id}")
+    logger.debug(f"Using provider npi: {provider_id}")
 
     params = {
         "user_id": appt_rqt.user_id,
-        "provider_id": provider_id,
+        "provider_id": provider_id,  # this is going to be NPI
         "filename": appt_rqt.data_location,
         "summary": info.get("Summary", {}).get("summary"),
         "appointment_datetime": info.get("AppointmentMeta", {}).get("datetime"),

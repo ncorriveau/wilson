@@ -159,7 +159,6 @@ class ProviderInfo(BaseModel):
 
     # we are using this so we can explicitly pass in legal values to the prompt
     # in a dynamic manner. however, we just want the actual value (not the enum)
-    # return from the llm
     specialty: SpecialtyEnum | None = Field(  # type: ignore
         default=None, description="""The specialty of the provider"""
     )
