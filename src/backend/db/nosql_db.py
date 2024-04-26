@@ -151,7 +151,7 @@ def get_relevant_providers(
     }
     # Perform the query
     results = provider_collection.find(query)
-    return results
+    return list(results)
 
 
 if __name__ == "__main__":
@@ -191,14 +191,16 @@ if __name__ == "__main__":
     # # print("Inserted physician with ID:", inserted_id)
     # modified_count = upsert_provider(providers, provider_info)
 
-    # patient_info = {"lat": 40.766668, "lng": -73.9814608, "insurance_id": 3}
+    patient_info = {"lat": 40.766668, "lng": -73.9814608, "insurance_id": 3}
 
     # # Fetching a document
     # # doc = providers.find_one({"specialties": 'PCP', "insurances.id": patient_info["insurance_id"]})  # , "insurances.insurance_id": patient_info["insurance_id"]
     # # pprint.pprint(doc)
-    # results = get_relevant_providers(providers, patient_info, "PCP")
+    results = get_relevant_providers(providers, patient_info, "PCP")
+    print(results)
     # for result in results:
     #     pprint.pprint(result)
     # results = get_provider_id(providers, provider_info)
-    doc = providers.find_one({"npi": "1609958305"})
-    pprint.pprint(doc)
+    # doc = providers.find_one({"npi": "1609958305"})
+    # for r in results:
+    #     pprint.pprint(r)

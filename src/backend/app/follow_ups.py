@@ -6,7 +6,10 @@ from typing import Any, Dict
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
+from pymongo import MongoClient
+from pymongo.collection import Collection
 
+from ..db.nosql_db import get_relevant_providers
 from ..db.relational_db import create_connection, query_db, select_relevant_providers
 from ..models.open_ai.utils import OAIRequest, a_send_rqt
 from .appointments import FollowUps, SpecialtyEnum, specialties
@@ -48,16 +51,24 @@ As an example, if the task is 'consult sports medicine for back' then you would 
 
 async def get_followup_suggestions(
     client: OpenAI | AsyncOpenAI,
-    conn: connection,
-    user_loc: Dict[str, float],
+    collection: Collection,
+    patient_info: Dict[str, Any],
     tasks: FollowUps,
 ) -> list[Any]:
     """
     Get follow up suggestions for the patient based on the tasks assigned
-    by the physician and the location of the user. user_loc will be passed
-    in as a dict with latitude and longitude
+    by the physician and the location of the user.
+
+    Parameters
+    ----------
+    client : OpenAI | AsyncOpenAI
+        The OpenAI client to send requests to
+    conn : connection | Collection
+        The connection to the database
+    patient_info : Dict[str, Any]
+        The information about the patient including the location and insurance_id
+        of the user
     """
-    # location, insurance_id = get_location_and_insurance(conn, user_id)
     followup_suggestions = []
     for task in tasks:
         logger.info(f"Receiving query for follow up task: {task}")
@@ -69,8 +80,8 @@ async def get_followup_suggestions(
 
         response = await a_send_rqt(client, rqt)
         logger.info(f"Task: {task}, Response: {response}")
-        result = select_relevant_providers(
-            conn, user_loc["lat"], user_loc["lng"], response.specialty.value
+        result = get_relevant_providers(
+            collection, patient_info, response.specialty.value
         )
 
         logger.info(f"Result: {result}\n")
@@ -80,22 +91,23 @@ async def get_followup_suggestions(
 
 
 if __name__ == "__main__":
-    tasks = [
-        {"task": "Referral to ENT specialist for chronic cough."},
-        {"task": "Consider sleep study for persistent insomnia issues."},
-        {"task": "Referral to sports medicine for full evaluation of lower back pain."},
-    ]
-    user_loc = {"lat": 40.7197743, "lng": -73.9641896}
-
     client = AsyncOpenAI()
-    conn = create_connection()
+    client_db = MongoClient("mongodb://localhost:27017/")
+    db = client_db["wilson_ai"]
+    collection = db.providers
+
+    tasks = [
+        {"task": "Schedule with Primary Care Physician."},
+        # {"task": "Consider sleep study for persistent insomnia issues."},
+        # {"task": "Referral to sports medicine for full evaluation of lower back pain."},
+    ]
+    user_loc = {"lat": 40.7197743, "lng": -73.9641896, "insurance_id": 3}
 
     async def main():
         followup_suggestions = await get_followup_suggestions(
-            client, conn, user_loc, tasks
+            client, collection, user_loc, tasks
         )
         print(followup_suggestions)
         await client.close()
 
     asyncio.run(main())
-    conn.close()
