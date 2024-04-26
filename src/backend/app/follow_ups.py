@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+from pprint import pprint
 from typing import Any, Dict
 
 from openai import AsyncOpenAI, OpenAI
@@ -84,8 +85,12 @@ async def get_followup_suggestions(
             collection, patient_info, response.specialty.value
         )
 
-        logger.info(f"Result: {result}\n")
-        followup_suggestions.append({"task": task, "result": result})
+        # todo: clean this up this is ugly
+        if result:
+            del result[0]["_id"]
+
+        logger.info(f"Result: {pprint(result)}\n")
+        followup_suggestions.append({"provider": result, "task": task})
 
     return followup_suggestions
 

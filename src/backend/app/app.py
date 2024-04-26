@@ -116,6 +116,13 @@ def insert_db(request: Request, params):
         )
 
 
+class UserInfo(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    lat: float = Field(..., description="The latitude of the user.")
+    lng: float = Field(..., description="The longitude of the user.")
+    insurance_id: int = Field(..., description="The insurance id of the user.")
+
+
 class ApptRqt(BaseModel):
     user_id: int = Field(..., description="The user id of the patient.")
     data_location: str = Field(..., description="The location of the data to analyze.")
@@ -127,7 +134,7 @@ class QueryRqt(BaseModel):
 
 
 class FollowUpRqt(BaseModel):
-    user_id: int = Field(..., description="The user id of the patient.")
+    user_info: UserInfo = Field(..., description="Information regarding the user.")
     follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
 
 
@@ -193,7 +200,7 @@ async def get_follow_ups(request: Request, followup_rqt: FollowUpRqt):
     tasks = followup_rqt.follow_ups.tasks
     print(f"Received tasks: {tasks}")
     follow_ups = await get_followup_suggestions(
-        client, request.state.conn, followup_rqt.user_id, tasks
+        client, provider_collection, followup_rqt.user_info.model_dump(), tasks
     )
     return follow_ups
 
