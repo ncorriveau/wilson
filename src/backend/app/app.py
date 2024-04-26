@@ -196,9 +196,9 @@ async def query_data(query_rqt: QueryRqt):
 
 
 @app.post("/api/get_follow_ups")
-async def get_follow_ups(request: Request, followup_rqt: FollowUpRqt):
+async def get_follow_ups(followup_rqt: FollowUpRqt):
     tasks = followup_rqt.follow_ups.tasks
-    print(f"Received tasks: {tasks}")
+    logging.info(f"Received tasks: {tasks}")
     follow_ups = await get_followup_suggestions(
         client, provider_collection, followup_rqt.user_info.model_dump(), tasks
     )
@@ -207,7 +207,6 @@ async def get_follow_ups(request: Request, followup_rqt: FollowUpRqt):
 
 @app.post("/upload-pdf/")
 async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...)):
-    # TODO: add some user id authentication
     if not file.content_type == "application/pdf":
         raise HTTPException(
             status_code=400, detail="Invalid file type. Please upload a PDF."
