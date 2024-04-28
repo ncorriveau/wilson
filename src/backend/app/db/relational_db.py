@@ -394,7 +394,7 @@ def insert_row_return(conn: connection, query: str, params: Dict[str, str]) -> N
 def get_specialties(conn: connection) -> Dict[str, str]:
     query = "SELECT specialty, description FROM specialties"
     results = query_db(conn, query)
-    specialties = {result[0]: result[1] for result in results}
+    specialties = {result["specialty"]: result["description"] for result in results}
     return specialties
 
 
@@ -474,6 +474,7 @@ def get_user_by_email(conn: connection, email: str) -> Dict[str, str]:
 
 def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, str]:
     user = get_user_by_email(conn, email)
+    logger.info(f"User: {user}")
     if not user:
         return False
 
@@ -504,7 +505,7 @@ if __name__ == "__main__":
             "date": "2023-09-12",
         },
     }
-    conn = create_connection()
+    conn = get_db()
     # address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
     # lat, lng = geocode_address(**address)
     # print(lat, lng)

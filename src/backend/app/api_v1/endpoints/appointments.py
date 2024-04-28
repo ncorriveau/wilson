@@ -1,24 +1,34 @@
+import json
 import logging
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Type
+from pprint import pprint
+from typing import List, Type
 
-import requests
+import aioredis
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, ConfigDict, Field, validator
+from pymongo import MongoClient
 
-from ..db.relational_db import (
-    create_connection,
-    get_provider_id_by_npi,
-    get_specialties,
-)
-from ..models.open_ai import prompts as oai_prompts
-from ..models.open_ai.utils import OAIRequest, a_send_rqt
+from ....models.open_ai import prompts as oai_prompts
+from ....models.open_ai.utils import OAIRequest, a_send_rqt
+from ...db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
+from ...db.relational_db import create_connection, get_specialties, upsert_appointment
+from ...db.vector_db import create_hash_id, load_documents
+from ...deps import get_current_user
 
 logger = logging.getLogger(__name__)
+
+METADATA_PARAMS = [
+    "user_id",
+    "provider_id",
+    "filename",
+    "appointment_date",
+]
 
 
 def make_specialty_enum() -> Type[Enum]:
@@ -275,6 +285,104 @@ class AppointmentAnalysis:
             responses[rqt.response_schema.__name__] = response
 
         return responses
+
+
+class ApptRqt(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    data_location: str = Field(..., description="The location of the data to analyze.")
+
+
+client = AsyncOpenAI()
+redis = aioredis.from_url("redis://localhost")
+mongo_db_client = MongoClient("mongodb://localhost:27017/")
+db = mongo_db_client["wilson_ai"]
+provider_collection = db.providers
+conn = create_connection()
+
+
+async def cache_data(key: str, value: str, expire: int = 3600):
+    async with redis.client() as conn:
+        await conn.set(key, value, ex=expire)
+
+
+async def get_cached_data(key: str):
+    async with redis.client() as conn:
+        return await conn.get(key)
+
+
+def insert_vector_db(context, params):
+    try:
+        v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
+        load_documents(context, v_db_params)
+        logger.info(f"Context loaded into vector db")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to insert into vector db with error {str(e)}",
+        )
+
+
+def insert_db(conn: connection, params):
+    try:
+        upsert_appointment(conn, params)
+        logger.info(f"DB inserted Succesfully")
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to insert into db with error {str(e)}"
+        )
+
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
+
+
+@router.post("/api/analyze_appointment/")
+async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
+    # TODO: have this read in from an s3 location
+    # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
+    context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
+    text = " ".join([doc.text for doc in context])
+
+    cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
+    encoded_info = await get_cached_data(cache_key)
+    info = json.loads(encoded_info) if encoded_info else None
+
+    if not info:
+        logger.debug(f"Cache miss for {cache_key}")
+        appt = AppointmentAnalysis(client, context)
+        info = await appt.a_get_info()
+        info = {k: v.model_dump() for k, v in info.items()}  # make serializable
+        await cache_data(cache_key, json.dumps(info))
+
+    logger.info(f"info = {pprint(info)}")
+
+    provider_info = info.get("AppointmentMeta", {}).get("provider_info")
+    if not provider_info.get("npi"):
+        provider_info["npi"] = await get_provider_id(provider_collection, provider_info)
+    else:
+        provider_info["npi"] = provider_info.get("npi")
+
+    existing_record = get_provider_by_npi(provider_collection, provider_info["npi"])
+    if not existing_record:
+        logger.info(f"Provider not found in db - inserting record")
+        background_tasks.add_task(upsert_provider, provider_collection, provider_info)
+
+    # by here we need to have information verified
+    params = {
+        "user_id": appt_rqt.user_id,
+        "provider_id": provider_info["npi"],  # this is going to be NPI
+        "filename": appt_rqt.data_location,
+        "summary": info.get("Summary", {}).get("summary"),
+        "appointment_datetime": info.get("AppointmentMeta", {}).get("datetime"),
+        "follow_ups": json.dumps(info.get("FollowUps", {})),
+        "perscriptions": json.dumps(info.get("Perscriptions", {})),
+    }
+
+    background_tasks.add_task(insert_db, conn, params)
+    background_tasks.add_task(insert_vector_db, context, params)
+
+    return info
 
 
 if __name__ == "__main__":
