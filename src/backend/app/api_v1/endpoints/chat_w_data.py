@@ -16,7 +16,7 @@ class QueryRqt(BaseModel):
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
-@router.post("/api/query_data/")
+@router.post("/")
 async def query_data(query_rqt: QueryRqt):
     index = build_index(embed_model_llamaindex)
     response = query_documents(query_rqt.query, query_rqt.user_id, index)

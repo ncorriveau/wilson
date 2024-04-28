@@ -23,15 +23,14 @@ app = FastAPI(
     description="""A FastAPI application to extract information from patient
     medical documents""",
     version="0.1.0",
-    # dependencies=[Depends(get_current_user)]
 )
 
 app.include_router(appointments.router, prefix="/appointments", tags=["appointments"])
 app.include_router(follow_ups.router, prefix="/follow_ups", tags=["follow_ups"])
-app.include_router(chat_w_data.router, prefix="/chat_w_data", tags=["chat_w_data"])
+app.include_router(chat_w_data.router, prefix="/chat_w_data", tags=["chat with data"])
 app.include_router(login.router, prefix="/auth", tags=["login"])
 
 
 @app.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
+    return {"message": "Welcome to Wilson AI API!"}

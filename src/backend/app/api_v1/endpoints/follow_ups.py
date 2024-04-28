@@ -117,7 +117,7 @@ db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 
 
-@router.post("/api/get_follow_ups")
+@router.post("/")
 async def get_follow_ups(followup_rqt: FollowUpRqt):
     tasks = followup_rqt.follow_ups.tasks
     logging.info(f"Received tasks: {tasks}")

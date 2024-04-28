@@ -1,10 +1,7 @@
-from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from psycopg2.extensions import connection
 from pydantic import BaseModel
 
 from .db.relational_db import create_connection, get_db, get_user_by_email

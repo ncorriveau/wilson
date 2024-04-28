@@ -337,7 +337,7 @@ def insert_db(conn: connection, params):
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
-@router.post("/api/analyze_appointment/")
+@router.post("/")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
     # TODO: have this read in from an s3 location
     # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
