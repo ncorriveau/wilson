@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from .db.relational_db import create_connection, get_db, get_user_by_email
 from .security.auth import verify_token
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/token")
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 class TokenData(BaseModel):
