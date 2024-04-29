@@ -4,8 +4,11 @@ from typing import Any, Dict, List
 
 import asyncpg
 import psycopg2
+import psycopg2.extras
 import requests
 from psycopg2.extensions import connection
+
+from ..security.auth import verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +136,6 @@ SELECT_RELEVANT_PROVIDERS = """
         distance ASC;
     """
 
-# looking at unique user/provider/appointment date combos is an assumption that needs to be revisited
-# this would be strictly correct if we had a start time instead of a YYYYMMDD format
-# not doing any sort of hashed doc id because in theory, we should have the same take aways
 UPSERT_APPOINTMENT_QUERY = """
 INSERT INTO appointment (user_id, provider_id, filename, summary, appointment_datetime, follow_ups, perscriptions)
 VALUES (%(user_id)s, %(provider_id)s, %(filename)s, %(summary)s, %(appointment_datetime)s, %(follow_ups)s, %(perscriptions)s)
@@ -264,6 +264,14 @@ async def create_pool():
     )
 
 
+async def get_db():
+    conn = await asyncpg.connect(**async_pg_params)
+    try:
+        yield conn
+    finally:
+        await conn.close()
+
+
 # TODO: read these from config
 def create_connection() -> connection:
     conn = psycopg2.connect(**pg_params)
@@ -331,7 +339,7 @@ def query_db(
     """
     Generic helper function to execute queries on the database
     """
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         if not params:
             cursor.execute(query)
@@ -386,7 +394,7 @@ def insert_row_return(conn: connection, query: str, params: Dict[str, str]) -> N
 def get_specialties(conn: connection) -> Dict[str, str]:
     query = "SELECT specialty, description FROM specialties"
     results = query_db(conn, query)
-    specialties = {result[0]: result[1] for result in results}
+    specialties = {result["specialty"]: result["description"] for result in results}
     return specialties
 
 
@@ -458,6 +466,24 @@ def get_provider_id(
     return results[0][0]
 
 
+def get_user_by_email(conn: connection, email: str) -> Dict[str, str]:
+    query = f"SELECT * FROM users WHERE email = '{email}'"
+    results = query_db(conn, query)
+    return results[0]
+
+
+def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, str]:
+    user = get_user_by_email(conn, email)
+    logger.info(f"User: {user}")
+    if not user:
+        return False
+
+    if not verify_password(password, user["hashed_pw"]):
+        return False
+
+    return user
+
+
 if __name__ == "__main__":
     appointment_meta = {
         "AppointmentMeta": {
@@ -479,12 +505,12 @@ if __name__ == "__main__":
             "date": "2023-09-12",
         },
     }
-    conn = create_connection()
-    address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
-    lat, lng = geocode_address(**address)
-    print(lat, lng)
-    results = select_relevant_providers(conn, lat, lng, "ENT")
-    print(results)
+    conn = get_db()
+    # address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
+    # lat, lng = geocode_address(**address)
+    # print(lat, lng)
+    # results = select_relevant_providers(conn, lat, lng, "ENT")
+    # print(results)
     # # async def main():
     # #     async with asyncpg.create_pool(**async_pg_params) as pool:
     # #         async with pool.acquire() as conn:
@@ -492,19 +518,6 @@ if __name__ == "__main__":
     # #             await conn.execute(CREATE_APPT_TABLE_QUERY)
 
     # # asyncio.run(main())
-    # print(get_specialties(conn))
-    # # create_table(
-    # #     conn,
-    # #     [CREATE_SPECIALTIES_QUERY],
-    # #     # [
-    # #     #     CREATE_APPT_TABLE_QUERY,
-    # #     #     # CREATE_COVERAGE_TYPE_QUERY,
-    # #     #     # CREATE_INSURANCE_QUERY,
-    # #     #     # CREATE_USER_QUERY,
-    # #     #     # CREATE_PROVIDER_QUERY,
-    # #     #     # CREATE_PERSCRIPTION_QUERY,
-    # #     #     # CREATE_PROVIDER_TO_INSURANCE_QUERY,
-    # #     #     # CREATE_USER_TO_INSURANCE_QUERY,
-    # #     # ],
-    # # )
-    # # print(f"Table created successfully")
+    # user = get_user_by_email(conn, "ncorriveau13@gmail.com")
+    user = authenticate_user(conn, "ncorriveau13@gmail.com", "nickospassword")
+    print(user)

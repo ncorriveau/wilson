@@ -25,17 +25,18 @@ from PyPDF2 import PdfReader
 
 load_dotenv()
 
-from ..db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
-from ..db.relational_db import create_connection, create_pool, upsert_appointment
-from ..db.vector_db import (
+from db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
+from db.relational_db import create_connection, create_pool, upsert_appointment
+from db.vector_db import (
     build_index,
     create_hash_id,
     embed_model_llamaindex,
     load_documents,
     query_documents,
 )
-from .appointments import AppointmentAnalysis, FollowUps
-from .follow_ups import get_followup_suggestions
+
+from .api_v1.endpoints.appointments import AppointmentAnalysis, FollowUps
+from .api_v1.endpoints.follow_ups import get_followup_suggestions
 
 with open("src/backend/configs/logging_config.yaml", "r") as config_file:
     logging_config = yaml.safe_load(config_file)

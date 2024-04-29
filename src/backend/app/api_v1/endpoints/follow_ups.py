@@ -4,15 +4,16 @@ import sys
 from pprint import pprint
 from typing import Any, Dict
 
+from fastapi import APIRouter, Depends
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from ..db.nosql_db import get_relevant_providers
-from ..db.relational_db import create_connection, query_db, select_relevant_providers
-from ..models.open_ai.utils import OAIRequest, a_send_rqt
+from ....models.open_ai.utils import OAIRequest, a_send_rqt
+from ...db.nosql_db import get_relevant_providers
+from ...deps import get_current_user
 from .appointments import FollowUps, SpecialtyEnum, specialties
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,13 @@ class TaskSpecialty(BaseModel):
     specialty: SpecialtyEnum | None = Field(  # type: ignore
         default=None, description="""The specialty of the provider"""
     )
+
+
+class UserInfo(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    lat: float = Field(..., description="The latitude of the user.")
+    lng: float = Field(..., description="The longitude of the user.")
+    insurance_id: int = Field(..., description="The insurance id of the user.")
 
 
 SYSTEM_MSG = """
@@ -85,7 +93,8 @@ async def get_followup_suggestions(
             collection, patient_info, response.specialty.value
         )
 
-        # todo: clean this up this is ugly
+        # TODO: clean this up this is ugly
+        # we are deleting because _id is not serializable
         if result:
             del result[0]["_id"]
 
@@ -93,6 +102,29 @@ async def get_followup_suggestions(
         followup_suggestions.append({"provider": result, "task": task})
 
     return followup_suggestions
+
+
+class FollowUpRqt(BaseModel):
+    user_info: UserInfo = Field(..., description="Information regarding the user.")
+    follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
+
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
+
+client = AsyncOpenAI()
+mongo_db_client = MongoClient("mongodb://localhost:27017/")
+db = mongo_db_client["wilson_ai"]
+provider_collection = db.providers
+
+
+@router.post("/")
+async def get_follow_ups(followup_rqt: FollowUpRqt):
+    tasks = followup_rqt.follow_ups.tasks
+    logging.info(f"Received tasks: {tasks}")
+    follow_ups = await get_followup_suggestions(
+        client, provider_collection, followup_rqt.user_info.model_dump(), tasks
+    )
+    return follow_ups
 
 
 if __name__ == "__main__":
