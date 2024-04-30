@@ -3,6 +3,7 @@ import logging
 import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .api_v1.router import api_router
 
@@ -22,6 +23,16 @@ app = FastAPI(
     description="""A FastAPI application to extract information from patient
     medical documents""",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix="/api/v1")
