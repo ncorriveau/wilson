@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import ResultsDisplay from './Results';
+import LoadingWithMessages from './LoadingWithMessages';
 
 const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
 const DataSubmitter: React.FC = () => {
     const [userId, setUserId] = useState('');
     const [dataLocation, setDataLocation] = useState('');
-    const [response, setResponse] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [results, setResults] = useState<any>(null);
+    const [showDialog, setShowDialog] = useState(false);
 
     const handleSubmit = async () => {
         const payload = {
@@ -13,6 +17,7 @@ const DataSubmitter: React.FC = () => {
             data_location: dataLocation
         };
 
+        setLoading(true);
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -24,14 +29,29 @@ const DataSubmitter: React.FC = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                setResponse('Data processed successfully: ' + JSON.stringify(result));
+                setResults(result);
+                setShowDialog(true);
             } else {
-                setResponse('Failed to process data.');
+                alert('Failed to process data.');
             }
         } catch (error) {
             console.error('Submission error:', error);
-            setResponse('An error occurred while submitting data.');
+            alert('An error occurred while submitting data.');
+        } finally { 
+            setLoading(false);
         }
+    };
+    const handleConfirm = () => {
+        console.log("Analysis confirmed by user");
+        setShowDialog(false);
+        alert('Confirmation successful. Proceeding with the next steps.');
+        // Additional actions after confirmation can be added here
+    };
+
+    const handleCancel = () => {
+        console.log("User cancelled the confirmation");
+        setShowDialog(false);
+        alert('Confirmation cancelled. Please review or modify the data.');
     };
 
     return (
@@ -50,7 +70,13 @@ const DataSubmitter: React.FC = () => {
                 placeholder="Enter Data Location"
             />
             <button onClick={handleSubmit}>Submit</button>
-            <p>{response}</p>
+            {loading ? <LoadingWithMessages /> : (showDialog && results && (
+                <ResultsDisplay
+                    results={results}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancel}
+                />
+            ))}
         </div>
     );
 };
