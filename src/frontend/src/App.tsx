@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
-import PdfUploader from './components/AppointmentUpload'
+import DataSubmitter from './components/AppointmentUpload'
 import './App.css'
 
 const App = () => {
   return (
       <div className="App">
-          <PdfUploader />
+          <DataSubmitter />
       </div>
   );
 }

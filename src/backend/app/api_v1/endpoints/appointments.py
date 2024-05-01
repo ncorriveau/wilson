@@ -334,7 +334,7 @@ def insert_db(conn: connection, params):
         )
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter()
 
 
 @router.post("/")

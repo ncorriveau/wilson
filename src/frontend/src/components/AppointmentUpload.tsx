@@ -1,59 +1,58 @@
 import React, { useState } from 'react';
 
-interface PdfUploaderProps {
-}
+const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
-const apiUrl = 'http://localhost:8000/api/v1/chat_w_data/upload-pdf/';
+const DataSubmitter: React.FC = () => {
+    const [userId, setUserId] = useState('');
+    const [dataLocation, setDataLocation] = useState('');
+    const [response, setResponse] = useState('');
 
-const PdfUploader: React.FC<PdfUploaderProps> = () => {
-    const [file, setFile] = useState<File | null>(null);
-    const [userId, setUserId] = useState<string>('');
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFile(event.target.files ? event.target.files[0] : null);
-    };
-    const handleUserIdChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setUserId(event.target.value);
-    };
-
-    const handleUpload = async () => {
-        if (!file) {
-            alert('Please select a file first!');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
+    const handleSubmit = async () => {
+        const payload = {
+            user_id: parseInt(userId, 10),
+            data_location: dataLocation
+        };
 
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 
-                    'x-user-id': userId,
+                headers: {
+                    'Content-Type': 'application/json',
                 },
-                body: formData,
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
-                const data = await response.json();
-                alert(`File uploaded successfully! Server response: ${JSON.stringify(data)}`);
+                const result = await response.json();
+                setResponse('Data processed successfully: ' + JSON.stringify(result));
             } else {
-                alert('Failed to upload the file.');
+                setResponse('Failed to process data.');
             }
         } catch (error) {
-            alert('An error occurred while uploading the file.');
-            console.error('Upload error:', error);
+            console.error('Submission error:', error);
+            setResponse('An error occurred while submitting data.');
         }
     };
 
     return (
-        <div className="uploader">
-        <h1>Upload PDF</h1>
-        <input type="text" placeholder="Enter user ID" value={userId} onChange={handleUserIdChange} />
-        <input type="file" accept="application/pdf" onChange={handleFileChange} />
-        <button onClick={handleUpload}>Upload</button>
-    </div>
+        <div className="data-submitter">
+            <h1>Submit Data</h1>
+            <input
+                type="text"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="Enter User ID"
+            />
+            <input
+                type="text"
+                value={dataLocation}
+                onChange={(e) => setDataLocation(e.target.value)}
+                placeholder="Enter Data Location"
+            />
+            <button onClick={handleSubmit}>Submit</button>
+            <p>{response}</p>
+        </div>
     );
 };
 
-export default PdfUploader;
+export default DataSubmitter;
