@@ -13,7 +13,8 @@ class QueryRqt(BaseModel):
     query: str = Field(..., description="Query to be executed on the data")
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+# TODO: add back in auth when we figure out auth in the front end.
+router = APIRouter()
 
 
 @router.post("/")
