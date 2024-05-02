@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import ResultsDisplay from './Results';
-import LoadingWithMessages from './LoadingWithMessages';
+import MultiStepConfirmation from './MultiStepConfirmation';
 
 const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
-const DataSubmitter: React.FC = () => {
-    const [userId, setUserId] = useState('');
+
+const AppointmentManager: React.FC = () => {
+    // const [loading, setLoading] = useState(false);
     const [dataLocation, setDataLocation] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any>(null);
-    const [showDialog, setShowDialog] = useState(false);
+    const [userId, setUserId] = useState('');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [analysisResults, setAnalysisResults] = useState<any>(null);
 
     const handleSubmit = async () => {
         const payload = {
             user_id: parseInt(userId, 10),
             data_location: dataLocation
         };
-
-        setLoading(true);
+    
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -26,11 +25,12 @@ const DataSubmitter: React.FC = () => {
                 },
                 body: JSON.stringify(payload),
             });
-
+    
             if (response.ok) {
                 const result = await response.json();
-                setResults(result);
-                setShowDialog(true);
+                console.log(result)
+                setAnalysisResults(result);
+                setModalOpen(true);
             } else {
                 alert('Failed to process data.');
             }
@@ -38,20 +38,13 @@ const DataSubmitter: React.FC = () => {
             console.error('Submission error:', error);
             alert('An error occurred while submitting data.');
         } finally { 
-            setLoading(false);
         }
     };
-    const handleConfirm = () => {
-        console.log("Analysis confirmed by user");
-        setShowDialog(false);
-        alert('Confirmation successful. Proceeding with the next steps.');
-        // Additional actions after confirmation can be added here
-    };
 
-    const handleCancel = () => {
-        console.log("User cancelled the confirmation");
-        setShowDialog(false);
-        alert('Confirmation cancelled. Please review or modify the data.');
+    const handleClose = () => {
+        // Perform any cleanup or final actions before closing the modal
+        console.log("Closing modal and cleaning up");
+        setModalOpen(false); // Close the modal
     };
 
     return (
@@ -69,16 +62,12 @@ const DataSubmitter: React.FC = () => {
                 onChange={(e) => setDataLocation(e.target.value)}
                 placeholder="Enter Data Location"
             />
-            <button onClick={handleSubmit}>Submit</button>
-            {loading ? <LoadingWithMessages /> : (showDialog && results && (
-                <ResultsDisplay
-                    results={results}
-                    onConfirm={handleConfirm}
-                    onCancel={handleCancel}
-                />
-            ))}
+            <button onClick={handleSubmit}>Get Appointment Analysis</button>
+            {modalOpen && analysisResults && (
+                <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
+            )}
         </div>
     );
 };
 
-export default DataSubmitter;
+export default AppointmentManager;
