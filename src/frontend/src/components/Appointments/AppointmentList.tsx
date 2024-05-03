@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-
+import './AppointmentList.css';
 interface Appointment {
   id: number;
   date: string;
+  isOpen: boolean;
   prescriptions: {
     drugs: {
       technical_name: string;
@@ -23,7 +24,6 @@ const apiUrl = 'http://localhost:8000/api/v1/appointments/'
 
 const AppointmentList: React.FC<{ userId: string }> = ({ userId }) => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -31,8 +31,11 @@ const AppointmentList: React.FC<{ userId: string }> = ({ userId }) => {
                     const response = await fetch(`${apiUrl}${userId}`);
                     if (response.ok) {
                         const data = await response.json();
-                        console.log('data', data)
-                        setAppointments(data.appointments);
+                        const updatedAppointments = data.appointments.map((appointment: Appointment) => ({
+                            ...appointment,
+                            isOpen: false
+                        }));
+                        setAppointments(updatedAppointments);
                     }
             } catch (error) {
                 console.error('Error fetching appointments:', error);
@@ -41,36 +44,45 @@ const AppointmentList: React.FC<{ userId: string }> = ({ userId }) => {
         fetchAppointments();
     }, [userId]);
 
+    const toggleAppointment = (id: number) => {
+        const updatedAppointments = appointments.map(appointment => ({
+            ...appointment,
+            isOpen: appointment.id === id ? !appointment.isOpen : appointment.isOpen
+        }));
+        setAppointments(updatedAppointments);
+    };
+
     console.log('appointments: ', appointments)
     
     return (
-        <div>
-            <h1>Appointments</h1>
-            { <div>
-                {appointments && (appointments.map((appointment) => (
-                    <div key={appointment.id} onClick={() => setSelectedAppointment(appointment)}>
-                        <h2>{appointment.provider_info.first_name} {appointment.provider_info.last_name}, {appointment.provider_info.specialty}, {appointment.date}</h2>
+        <div className="appointment-list">
+            <h2>Appointments</h2>
+            {appointments.map((appointment) => (
+                <React.Fragment key={appointment.id}>
+                    <div className={`appointment-header ${appointment.isOpen ? 'open' : ''}`} onClick={() => toggleAppointment(appointment.id)}>
+                        <div className={`caret ${appointment.isOpen ? 'open' : ''}`}></div>
+                        <h2>{appointment.provider_info.first_name} {appointment.provider_info.last_name} - {appointment.provider_info.specialty}, {appointment.date}</h2>
                     </div>
-                )))}
-            </div>}
-            {selectedAppointment && (
-                <div>
-                    <h3>Summary</h3> 
-                    <p>{selectedAppointment.summary}</p>
-                    <h3>Prescriptions</h3>
-                    <ul>
-                        {selectedAppointment.prescriptions.drugs.map((drug, index) => (
-                            <li key={index}>{drug.brand_name}: {drug.instructions}</li>
-                        ))}
-                    </ul>
-                    <h3>Follow Up Tasks</h3>
-                    <ul>
-                        {selectedAppointment.follow_ups.map((task, index) => (
-                            <li key={index}>{task}</li>
-                        ))}
-                    </ul>
-                </div>
-            )} 
+                    {appointment.isOpen && (
+                        <div className="appointment-details">
+                            <h3>Summary</h3> 
+                            <p>{appointment.summary}</p>
+                            <h3>Prescriptions</h3>
+                            <ul>
+                                {appointment.prescriptions.drugs.map((drug, index) => (
+                                    <li key={index}>{drug.brand_name}: {drug.instructions}</li>
+                                ))}
+                            </ul>
+                            <h3>Follow Up Tasks</h3>
+                            <ul>
+                                {appointment.follow_ups.map((task, index) => (
+                                    <li key={index}>{task}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </React.Fragment>
+            ))}
         </div>
     );
 };

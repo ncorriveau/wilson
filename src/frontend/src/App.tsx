@@ -1,6 +1,6 @@
 import AppointmentManager from './components/Appointments/Appointments'
 
-import './App.css'
+// import './App.css'
 
 const App = () => {
   return (

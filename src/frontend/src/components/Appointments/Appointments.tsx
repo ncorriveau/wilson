@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MultiStepConfirmation from './MultiStepConfirmation';
 import AppointmentList from './AppointmentList';
+import './Appointments.css';
 
 const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
