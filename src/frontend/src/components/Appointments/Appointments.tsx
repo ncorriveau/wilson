@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import MultiStepConfirmation from './MultiStepConfirmation';
+import AppointmentList from './AppointmentList';
 
 const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
@@ -18,7 +19,7 @@ const AppointmentManager: React.FC = () => {
         };
     
         try {
-            const response = await fetch(apiUrl, {
+            const response = await fetch(`${apiUrl}upload`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,8 +67,10 @@ const AppointmentManager: React.FC = () => {
             {modalOpen && analysisResults && (
                 <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
             )}
+            <AppointmentList userId={ userId }/>
         </div>
     );
+
 };
 
 export default AppointmentManager;

@@ -409,7 +409,7 @@ async def get_appointments(user_id: int):
         )
         provider_info["specialty"] = provider_info["specialties"][0]
         provider_info.pop("specialties")
-        item.update(provider_info)
+        item.update({"provider_info": provider_info})
         results.append(item)
 
     return {"appointments": results}

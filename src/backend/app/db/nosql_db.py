@@ -196,11 +196,16 @@ if __name__ == "__main__":
     # # Fetching a document
     # # doc = providers.find_one({"specialties": 'PCP', "insurances.id": patient_info["insurance_id"]})  # , "insurances.insurance_id": patient_info["insurance_id"]
     # # pprint.pprint(doc)
-    results = get_relevant_providers(providers, patient_info, "PCP")
-    print(results)
+    # results = get_relevant_providers(providers, patient_info, "PCP")
+    # print(results)
     # for result in results:
-    #     pprint.pprint(result)
-    # results = get_provider_id(providers, provider_info)
-    # doc = providers.find_one({"npi": "1609958305"})
-    # for r in results:
-    #     pprint.pprint(r)
+    # providers.update_one(
+    #     {"npi": "1609958305"},
+    #     {"$set": {"specialties": ["PCP"]}},
+    # )
+    pprint.pprint(
+        providers.find_one(
+            {"npi": "1609958305"},
+            {"first_name": 1, "last_name": 1, "specialties": 1, "_id": 0},
+        )
+    )
