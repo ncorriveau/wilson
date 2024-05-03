@@ -297,6 +297,13 @@ class ApptRqt(BaseModel):
     data_location: str = Field(..., description="The location of the data to analyze.")
 
 
+# class ApptResponse(BaseModel):
+#     prescriptions: List[Drug]
+#     provider_info: dict[str, any]
+#     follow_ups: List[str]
+#     summary: str
+
+
 client = AsyncOpenAI()
 redis = aioredis.from_url("redis://localhost")
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
@@ -344,8 +351,6 @@ router = APIRouter()
 
 @router.post("/upload")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
-    # TODO: have this read in from an s3 location
-    # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     text = " ".join([doc.text for doc in context])
 
@@ -387,7 +392,19 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
     background_tasks.add_task(insert_db, conn, params)
     background_tasks.add_task(insert_vector_db, context, params)
 
-    return info
+    return_provider_info = {
+        "first_name": provider_info["first_name"],
+        "last_name": provider_info["last_name"],
+        "specialty": provider_info["specialty"],
+    }
+
+    response = {
+        "prescriptions": info.get("Perscriptions", {}).get("drugs"),
+        "provider_info": return_provider_info,
+        "follow_ups": [task["task"] for task in info.get("FollowUps", {}).get("tasks")],
+        "summary": info.get("Summary", {}).get("summary"),
+    }
+    return response
 
 
 @router.get("/{user_id}")
