@@ -1,36 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import MultiStepConfirmation from './MultiStepConfirmation';
 import AppointmentList from './AppointmentList';
 import './Appointments.css';
+import axios from 'axios';
 
 const apiUrl = 'http://localhost:8000/api/v1/appointments/';
 
-
 const AppointmentManager: React.FC = () => {
-    // const [loading, setLoading] = useState(false);
-    const [dataLocation, setDataLocation] = useState('');
-    const [userId, setUserId] = useState('');
+    const [file, setFile] = useState<File | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [analysisResults, setAnalysisResults] = useState<any>(null);
+    const [userID, setUserId] = useState<string>('');
+
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        const uploadedFile = acceptedFiles[0];
+        if (uploadedFile.type === 'application/pdf') {
+            setFile(uploadedFile);
+        } else {
+            alert('Only PDF files are accepted.');
+        }
+    }, []);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        multiple: false,
+        // @ts-ignore
+        accept: 'application/pdf',
+    });
 
     const handleSubmit = async () => {
-        const payload = {
-            user_id: parseInt(userId, 10),
-            data_location: dataLocation
-        };
+        if (!file) {
+            alert('Please upload a PDF file.');
+            return;
+        }
+    
+        // this would need to be form eventually 
     
         try {
-            const response = await fetch(`${apiUrl}upload`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
+            const response = await axios.post(`${apiUrl}upload`, {
+                dataLocation: 'data',
+                userID: '1',
             });
     
-            if (response.ok) {
-                const result = await response.json();
-                console.log(result)
+            if (response.status === 200) {
+                const result = response.data;
+                console.log(result);
                 setAnalysisResults(result);
                 setModalOpen(true);
             } else {
@@ -39,14 +54,12 @@ const AppointmentManager: React.FC = () => {
         } catch (error) {
             console.error('Submission error:', error);
             alert('An error occurred while submitting data.');
-        } finally { 
         }
     };
 
     const handleClose = () => {
-        // Perform any cleanup or final actions before closing the modal
         console.log("Closing modal and cleaning up");
-        setModalOpen(false); // Close the modal
+        setModalOpen(false);
     };
 
     return (
@@ -54,24 +67,27 @@ const AppointmentManager: React.FC = () => {
             <h1>Submit Data</h1>
             <input
                 type="text"
-                value={userId}
+                value={userID}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Enter User ID"
             />
-            <input
-                type="text"
-                value={dataLocation}
-                onChange={(e) => setDataLocation(e.target.value)}
-                placeholder="Enter Data Location"
-            />
+            <div {...getRootProps()} className="dropzone">
+                {/* @ts-ignore */}
+                <input {...getInputProps()} />
+                {
+                    isDragActive ?
+                    <p>Drop the PDF here ...</p> :
+                    <p>Drag 'n' drop a PDF file here, or click to select a file</p>
+                }
+                {file && <div>Uploaded File: {file.name}</div>}
+            </div>
             <button onClick={handleSubmit}>Get Appointment Analysis</button>
             {modalOpen && analysisResults && (
                 <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
             )}
-            <AppointmentList userId={ userId }/>
+            <AppointmentList userId={userID} />
         </div>
     );
-
 };
 
 export default AppointmentManager;
