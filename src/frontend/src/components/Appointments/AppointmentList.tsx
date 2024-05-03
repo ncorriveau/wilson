@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface Appointment {
-  datetime: string;
+  id: number;
+  date: string;
   prescriptions: {
     drugs: {
       technical_name: string;
@@ -45,7 +46,7 @@ const AppointmentList: React.FC<{ userId: number }> = ({ userId }) => {
                     <div key={index} onClick={() => setSelectedAppointment(appointment)}>
                         <h2>{appointment.providerInfo.first_name} {appointment.providerInfo.last_name}</h2>
                         <p>{appointment.providerInfo.specialty}</p>
-                        <p>{appointment.datetime}</p>
+                        <p>{appointment.date}</p>
                     </div>
                 ))}
             </div>

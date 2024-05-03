@@ -1,5 +1,6 @@
 import logging
 import os
+from pprint import pprint
 from typing import Any, Dict, List
 
 import asyncpg
@@ -466,6 +467,12 @@ def get_provider_id(
     return results[0][0]
 
 
+def get_user_appointments(conn: connection, user_id: int) -> List[Dict[str, Any]]:
+    query = f"SELECT * FROM appointment WHERE user_id = {user_id}"
+    results = query_db(conn, query)
+    return results
+
+
 def get_user_by_email(conn: connection, email: str) -> Dict[str, str]:
     query = f"SELECT * FROM users WHERE email = '{email}'"
     results = query_db(conn, query)
@@ -505,7 +512,7 @@ if __name__ == "__main__":
             "date": "2023-09-12",
         },
     }
-    conn = get_db()
+    conn = create_connection()
     # address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
     # lat, lng = geocode_address(**address)
     # print(lat, lng)
@@ -518,6 +525,16 @@ if __name__ == "__main__":
     # #             await conn.execute(CREATE_APPT_TABLE_QUERY)
 
     # # asyncio.run(main())
-    # user = get_user_by_email(conn, "ncorriveau13@gmail.com")
-    user = authenticate_user(conn, "ncorriveau13@gmail.com", "nickospassword")
-    print(user)
+    data = get_user_appointments(conn, 1)
+    for d in data:
+        formatted_datetime = d["appointment_datetime"].strftime("%m/%d/%Y")
+        item = {
+            "id": d["id"],
+            "date": formatted_datetime,
+            "summary": d["summary"],
+            "perscriptions": d["perscriptions"],
+            "follow_ups": [t["task"] for t in d["follow_ups"]["tasks"]],
+        }
+        pprint(item)
+    # user = authenticate_user(conn, "ncorriveau13@gmail.com", "nickospassword")
+    # print(user)
