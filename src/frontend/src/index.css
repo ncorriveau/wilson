@@ -1,8 +1,17 @@
 :root {
+  --light-tan: #f8f0e3;  /* Placeholder for light tan color */
+  --custom-green: hsl(120, 30%, 59%);  /* Placeholder for green color, replace with your exact color */
+  
+  /* Base font settings */
   font-family: Inter, system-ui, sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  color-scheme: light dark;
+
+  /* Colors */
+  background-color: var(--light-tan);
+  color: var(--custom-green);
+
+  /* Text rendering */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -16,69 +25,30 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 320px;
   min-height: 100vh;
-  background-color: #f8f9fa; /* Light gray background */
-  color: #213547; /* Dark blue-gray text color for light mode */
-}
-
-h1, h2, h3, h4, h5, h6 {
-  color: #333; /* Darker text for headers */
-  font-family: 'Inter', Arial, sans-serif;
-}
-
-h1 {
-  font-size: 2.4em; /* Adjusting font size for main headings */
+  background-color: var(--light-tan);
+  color: var(--custom-green);
 }
 
 a {
-  font-weight: 500;
-  color: #646cff; /* Bright blue for links */
-  text-decoration: none; /* No underline */
+  color: var(--custom-green);
+  text-decoration: inherit;
 }
+
 a:hover, a:focus {
-  color: #535bf2; /* Slightly darker blue on hover/focus */
+  color: darken(var(--custom-green), 10%);
 }
 
 button {
-  border-radius: 8px;
-  border: 2px solid #646cff; /* Bright blue border */
+  background-color: var(--custom-green);
+  color: white;
+  border: none;
   padding: 8px 16px;
-  font-size: 1em;
-  font-weight: 500;
-  background-color: #ffffff; /* White background for buttons */
-  color: #333; /* Dark text for buttons */
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
-}
-button:hover, button:focus {
-  background-color: #646cff; /* Bright blue background on hover/focus */
-  color: #ffffff; /* White text on hover/focus */
+  transition: background-color 0.3s;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    background-color: #ffffff; /* White background for light mode */
-    color: #213547; /* Dark blue-gray text color */
-  }
-  a:hover {
-    color: #747bff; /* Lighter blue on hover for links */
-  }
-  button {
-    background-color: #f0f0f0; /* Lighter grey background for buttons */
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    background-color: #242424; /* Dark background for dark mode */
-    color: rgba(255, 255, 255, 0.87); /* Light text for dark mode */
-  }
-  a, a:hover {
-    color: #9baacf; /* Light blue for links in dark mode */
-  }
-  button {
-    background-color: #333; /* Dark background for buttons in dark mode */
-    color: #ffffff; /* White text for buttons in dark mode */
-  }
+button:hover {
+  background-color: lighten(var(--custom-green), 10%);
 }

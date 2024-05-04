@@ -80,7 +80,7 @@ const AppointmentManager: React.FC = () => {
                 }
                 {file && <div>Uploaded File: {file.name}</div>}
             </div>)}
-            <button onClick={handleSubmit}>Analyze your appointment 🤖</button>
+            <button onClick={handleSubmit}>🤖 Analyze your appointment 🤖</button>
             {modalOpen && analysisResults && (
                 <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
             )}

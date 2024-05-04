@@ -3,14 +3,14 @@
     font-family: Arial, sans-serif;
     max-width: 800px;
     margin: 20px auto;
-    background-color: #f8f9fa;
+    background-color: #f8f0e3;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .appointment-header {
     cursor: pointer;
-    background-color: #ffffff;
+    background-color: hsl(120, 40%, 77%);
     padding: 12px 16px;
     border-bottom: 1px solid #e1e4e8;
     position: relative;
@@ -33,7 +33,7 @@
 }
 
 .appointment-header:hover {
-    background-color: #f0f0f0;
+    background-color: hsl(120, 30%, 59%);
 }
 
 .appointment-details {
@@ -46,7 +46,7 @@
     display: block; /* Show details when header is open */
 }
 
-h1, h2, h3 {
+h1,h2, h3 {
     margin: 5px 0;
     color: #333;
 }
