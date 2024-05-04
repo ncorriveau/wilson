@@ -11,7 +11,7 @@ const AppointmentManager: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [analysisResults, setAnalysisResults] = useState<any>(null);
-    const [userID, setUserId] = useState<string>('');
+    // const [userID, setUserId] = useState<string>('');
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const uploadedFile = acceptedFiles[0];
@@ -39,8 +39,8 @@ const AppointmentManager: React.FC = () => {
     
         try {
             const response = await axios.post(`${apiUrl}upload`, {
-                dataLocation: 'data',
-                userID: '1',
+                data_location: 'data',
+                user_id: '1',
             });
     
             if (response.status === 200) {
@@ -64,13 +64,7 @@ const AppointmentManager: React.FC = () => {
 
     return (
         <div className="data-submitter">
-            <h1>Submit Data</h1>
-            <input
-                type="text"
-                value={userID}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="Enter User ID"
-            />
+            <h1>Upload Appointment Data</h1>
             <div {...getRootProps()} className="dropzone">
                 {/* @ts-ignore */}
                 <input {...getInputProps()} />
@@ -85,7 +79,7 @@ const AppointmentManager: React.FC = () => {
             {modalOpen && analysisResults && (
                 <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
             )}
-            <AppointmentList userId={userID} />
+            <AppointmentList userId={'1'} />
         </div>
     );
 };
