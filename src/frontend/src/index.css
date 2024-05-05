@@ -1,0 +1,59 @@
+:root {
+  --light-tan: #f8f0e3; /* Placeholder for light tan color */
+  --custom-green: hsl(
+    120,
+    30%,
+    59%
+  ); /* Placeholder for green color, replace with your exact color */
+
+  /* Base font settings */
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+
+  /* Colors */
+  background-color: var(--light-tan);
+  color: var(--custom-green);
+
+  /* Text rendering */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--light-tan);
+  color: var(--custom-green);
+}
+
+a {
+  color: var(--custom-green);
+  text-decoration: inherit;
+}
+
+a:hover,
+a:focus {
+  color: darken(var(--custom-green), 10%);
+}
+
+button {
+  background-color: var(--custom-green);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: lighten(var(--custom-green), 10%);
+}

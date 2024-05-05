@@ -17,7 +17,12 @@ from pymongo import MongoClient
 from ....models.open_ai import prompts as oai_prompts
 from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
-from ...db.relational_db import create_connection, get_specialties, upsert_appointment
+from ...db.relational_db import (
+    create_connection,
+    get_specialties,
+    get_user_appointments,
+    upsert_appointment,
+)
 from ...db.vector_db import create_hash_id, load_documents
 from ...deps import get_current_user
 
@@ -292,6 +297,13 @@ class ApptRqt(BaseModel):
     data_location: str = Field(..., description="The location of the data to analyze.")
 
 
+# class ApptResponse(BaseModel):
+#     prescriptions: List[Drug]
+#     provider_info: dict[str, any]
+#     follow_ups: List[str]
+#     summary: str
+
+
 client = AsyncOpenAI()
 redis = aioredis.from_url("redis://localhost")
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
@@ -334,13 +346,11 @@ def insert_db(conn: connection, params):
         )
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter()
 
 
-@router.post("/")
+@router.post("/upload")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
-    # TODO: have this read in from an s3 location
-    # documentation: https://github.com/run-llama/llama_index/blob/main/docs/docs/examples/data_connectors/simple_directory_reader_remote_fs.ipynb
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     text = " ".join([doc.text for doc in context])
 
@@ -382,7 +392,44 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
     background_tasks.add_task(insert_db, conn, params)
     background_tasks.add_task(insert_vector_db, context, params)
 
-    return info
+    return_provider_info = {
+        "first_name": provider_info["first_name"],
+        "last_name": provider_info["last_name"],
+        "specialty": provider_info["specialty"],
+    }
+
+    response = {
+        "prescriptions": info.get("Perscriptions", {}).get("drugs"),
+        "provider_info": return_provider_info,
+        "follow_ups": [task["task"] for task in info.get("FollowUps", {}).get("tasks")],
+        "summary": info.get("Summary", {}).get("summary"),
+    }
+    return response
+
+
+@router.get("/{user_id}")
+async def get_appointments(user_id: int):
+    results = []
+    appointments = get_user_appointments(conn, user_id)
+    for appt in appointments:
+        formatted_datetime = appt["appointment_datetime"].strftime("%m/%d/%Y")
+        item = {
+            "id": appt["id"],
+            "date": formatted_datetime,
+            "summary": appt["summary"],
+            "prescriptions": appt["perscriptions"],
+            "follow_ups": [task["task"] for task in appt["follow_ups"]["tasks"]],
+        }
+        provider_info = provider_collection.find_one(
+            {"npi": str(appt["provider_id"])},
+            {"first_name": 1, "last_name": 1, "specialties": 1, "_id": 0},
+        )
+        provider_info["specialty"] = provider_info["specialties"][0]
+        provider_info.pop("specialties")
+        item.update({"provider_info": provider_info})
+        results.append(item)
+
+    return {"appointments": results}
 
 
 if __name__ == "__main__":
