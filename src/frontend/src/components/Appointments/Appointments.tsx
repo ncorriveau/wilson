@@ -6,16 +6,18 @@ import "./Appointments.css";
 import axios from "axios";
 import LoadingWithMessages from "./LoadingWithMessages";
 
+interface AppointmentManagerProps {
+  token: string;
+  userId: string;
+}
+
 const apiUrl = "http://localhost:8000/api/v1/appointments/";
 
-const AppointmentManager: React.FC = () => {
+const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }) => {
   const [file, setFile] = useState<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-
-  // TODO: add this back in once we have some kind of user authentication
-  // const [userID, setUserId] = useState<string>('');
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
@@ -42,10 +44,18 @@ const AppointmentManager: React.FC = () => {
     // this would need to be form eventually
     setLoading(true);
     try {
-      const response = await axios.post(`${apiUrl}upload`, {
-        data_location: "data",
-        user_id: "1",
-      });
+      const response = await axios.post(`${apiUrl}upload`, 
+        {
+            data_location: "data",
+            user_id: userId,
+        },
+        {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        }
+    );
 
       if (response.status === 200) {
         const result = response.data;
@@ -89,7 +99,7 @@ const AppointmentManager: React.FC = () => {
       {modalOpen && analysisResults && (
         <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
       )}
-      <AppointmentList userId={"1"} />
+      <AppointmentList token= {token} userId={ userId }  />
     </div>
   );
 };

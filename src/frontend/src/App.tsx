@@ -15,7 +15,7 @@ const App = () => {
 
   return (
     <div className="App">
-      { !token ? <LoginPage setToken={handleSetToken} /> : <AppointmentManager /> }
+      { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <AppointmentManager token={ token } userId={ userId }/> }
     </div>
   );
 };

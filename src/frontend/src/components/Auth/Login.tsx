@@ -26,8 +26,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ setToken }) => {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
             });
-            console.log('retrieved access token for: ', response.data.userId)
+            console.log("user id is: ", response.data.userId);
             setToken(response.data.access_token, response.data.userId);
+        
         } catch (error) {
             setError('Invalid username or password');
         }

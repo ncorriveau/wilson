@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./AppointmentList.css";
 interface Appointment {
   id: number;
@@ -20,17 +21,26 @@ interface Appointment {
   summary: string;
 }
 
+interface AppointmentManagerProps {
+  token: string;
+  userId: string;
+}
+
 const apiUrl = "http://localhost:8000/api/v1/appointments/";
 
-const AppointmentList: React.FC<{ userId: string }> = ({ userId }) => {
+const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const response = await fetch(`${apiUrl}${userId}`);
-        if (response.ok) {
-          const data = await response.json();
+        const response = await axios.get(`${apiUrl}${userId}`, {
+          headers: {
+              'Authorization': `Bearer ${token}`,
+          },
+      });
+        if (response.status === 200) {
+          const data = await response.data;
           const updatedAppointments = data.appointments.map(
             (appointment: Appointment) => ({
               ...appointment,
