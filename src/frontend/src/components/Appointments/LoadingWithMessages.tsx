@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import './LoadingWithMessages.css';
+import React, { useState, useEffect } from "react";
+import "./LoadingWithMessages.css";
 
 const LoadingWithMessages: React.FC = () => {
-  const [message, setMessage] = useState('Analyzing...');
-  const messages = ['Analyzing...', 'Extracting very important medical info...', 'Almost done...'];
+  const [message, setMessage] = useState("Analyzing...");
+  const messages = [
+    "Analyzing...",
+    "Extracting very important medical info...",
+    "Almost done...",
+  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setMessage(prev => {
+      setMessage((prev) => {
         const nextIndex = (messages.indexOf(prev) + 1) % messages.length;
         return messages[nextIndex];
       });

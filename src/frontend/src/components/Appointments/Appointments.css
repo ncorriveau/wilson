@@ -1,23 +1,23 @@
 .dropzone {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 20px;
-    border-width: 2px;
-    border-radius: 2px;
-    border-color: #cccccc;
-    border-style: dashed;
-    background-color: #FDF5E6;
-    color: #bdbdbd;
-    outline: none;
-    transition: border .24s ease-in-out;
-    cursor: pointer;
-    height: 150px;  
-    justify-content: center;
-    text-align: center;
-    margin-bottom: 20px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border-width: 2px;
+  border-radius: 2px;
+  border-color: #cccccc;
+  border-style: dashed;
+  background-color: #fdf5e6;
+  color: #bdbdbd;
+  outline: none;
+  transition: border 0.24s ease-in-out;
+  cursor: pointer;
+  height: 150px;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .dropzone:hover {
-    border-color: #aaaaaa;
+  border-color: #aaaaaa;
 }

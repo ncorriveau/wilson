@@ -1,14 +1,14 @@
-import AppointmentManager from './components/Appointments/Appointments'
+import AppointmentManager from "./components/Appointments/Appointments";
 
 // import './App.css'
 
 const App = () => {
   return (
-      <div className="App">
-          <AppointmentManager/>
-      </div>
+    <div className="App">
+      <AppointmentManager />
+    </div>
   );
-}
+};
 
 //   return (
 //     <>
@@ -36,4 +36,4 @@ const App = () => {
 //   )
 // }
 
-export default App
+export default App;
