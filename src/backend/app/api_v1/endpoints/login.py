@@ -23,4 +23,4 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     access_token = create_access_token(
         user["email"], expires_delta=timedelta(minutes=30)
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "userId": user["id"], "token_type": "bearer"}
