@@ -183,18 +183,22 @@ VALUES (%(first_name)s, %(last_name)s, %(degree)s, %(email)s, %(npi)s, %(special
 RETURNING id
 """
 
-CREATE_PERSCRIPTION_QUERY = """
-CREATE TABLE IF NOT EXISTS perscriptions (
+CREATE_PRESCRIPTION_QUERY = """
+CREATE TABLE IF NOT EXISTS prescriptions (
     id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
     brand_name TEXT NOT NULL,
     technical_name TEXT NOT NULL,
+    instructions TEXT,
+    active_flag BOOLEAN DEFAULT TRUE,
+    provider_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 
-INSERT_PERSCRIPTION_QUERY = """
-INSERT INTO perscriptions (brand_name, technical_name)
-VALUES (%s, %s)
+INSERT_PRESCRIPTION_QUERY = """
+INSERT INTO prescriptions (user_id, brand_name, technical_name, instructions, provider_id)
+VALUES (%(user_id)s, %(brand_name)s, %(technical_name)s, %(instructions)s, %(provider_id)s)
 """
 
 CREATE_PROVIDER_TO_INSURANCE_QUERY = """
