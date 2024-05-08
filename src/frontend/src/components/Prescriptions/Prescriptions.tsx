@@ -39,7 +39,8 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
                 });
                 if (response.status === 200) {
                     const data = await response.data;
-                    setPrescriptions(data.prescriptions);
+                    console.log('data ', data)
+                    setPrescriptions(data);
                 }
             } catch (error) {
                 console.error("Error fetching prescriptions:", error);
@@ -78,18 +79,18 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
             {loading ? (
                 <p>Loading...</p>
             ) : (
-                prescriptions.map(prescription => (
+                prescriptions && prescriptions.map(prescription => (
                     <div key={prescription.id} className="prescription">
                         <h2>{prescription.brandName}</h2>
                         <p>Technical Name: {prescription.technicalName}</p>
                         <p>Instructions: {prescription.instructions}</p>
-                        <p>Prescribing Physician: {prescription.providerInfo.first_name}</p>
-                        <div className="status">
+                        <p>Prescribing Physician: {`${prescription.providerInfo.firstName} ${prescription.providerInfo.lastName}, ${prescription.providerInfo.specialty}`}</p>
+                        <div className="status">`
                             <span
                                 className={`status-icon ${prescription.isActive ? 'active' : 'inactive'}`}
                                 onClick={() => toggleActiveStatus(prescription)}
                             >
-                                {prescription.isActive ? '✔' : '✖'}
+                                {prescription.isActive ? '✅ ' : '⛔️'}
                             </span>
                             {prescription.isActive ? "Active" : "Inactive"}
                         </div>
