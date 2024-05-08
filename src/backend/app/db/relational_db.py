@@ -512,6 +512,16 @@ def get_user_by_email(conn: connection, email: str) -> Dict[str, str]:
     return results[0]
 
 
+def get_prescriptions_by_id(conn: connection, user_id: int) -> Dict[str, str]:
+    query = f"""
+    SELECT id, user_id, brand_name, technical_name, instructions, provider_id, active_flag
+    FROM prescriptions 
+    WHERE user_id = '{user_id}'
+    """
+    results = query_db(conn, query)
+    return results
+
+
 def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, str]:
     user = get_user_by_email(conn, email)
     logger.info(f"User: {user}")
@@ -536,12 +546,7 @@ if __name__ == "__main__":
     }
     conn = create_connection()
     try:
-        appt_id = upsert_appointment(conn, params)[0]
-        logger.info(f"Appointment inserted into db with id {appt_id}")
-        print(appt_id)
-        params.update({"appointment_id": appt_id})
-        pprint(params)
-        upsert_prescription(conn, params)
+        print(get_prescriptions_by_id(conn, 1))
 
     except Exception as e:
         raise e

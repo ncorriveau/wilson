@@ -6,12 +6,18 @@ interface PrescriptionProps {
   userId: string;
 }
 
+interface ProviderInfo  {
+    firstName: string;
+    lastName: string;
+    specialty: string;
+}
+
 interface Prescription {
     id: number;
     brandName: string;
     technicalName: string;
     instructions: string;
-    physician: string;
+    providerInfo: ProviderInfo;
     isActive: boolean;
 }
 
@@ -77,7 +83,7 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
                         <h2>{prescription.brandName}</h2>
                         <p>Technical Name: {prescription.technicalName}</p>
                         <p>Instructions: {prescription.instructions}</p>
-                        <p>Prescribing Physician: {prescription.physician}</p>
+                        <p>Prescribing Physician: {prescription.providerInfo.first_name}</p>
                         <div className="status">
                             <span
                                 className={`status-icon ${prescription.isActive ? 'active' : 'inactive'}`}
