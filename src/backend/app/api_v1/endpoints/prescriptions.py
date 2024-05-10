@@ -1,8 +1,6 @@
-import asyncio
 import logging
-import sys
 from pprint import pprint
-from typing import Any, Dict, List
+from typing import List
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -19,7 +17,7 @@ from ...db.relational_db import (
     set_prescription_status,
 )
 from ...deps import get_current_user
-from .appointments import FollowUps, SpecialtyEnum, specialties
+from .appointments import SpecialtyEnum
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +56,13 @@ class PrescriptionResponse(BaseModel):
         allow_population_by_field_name = True
 
 
+class PrescriptionRequest(BaseModel):
+    id: int = Field(..., description="The id of the prescription.")
+    active_flag: bool = Field(
+        ..., description="The active status of the prescription.", alias="isActive"
+    )
+
+
 def get_prescriptions(
     user_id: int, conn: connection, collection: Collection
 ) -> List[PrescriptionResponse]:
@@ -93,9 +98,8 @@ async def prescriptions(user_id: int):
 
 
 @router.put("/status/{prescription_id}")
-async def set_status(prescription_id: int, prescription: Dict[str, Any]):
-    print(prescription)
-    set_prescription_status(conn, prescription_id, prescription["isActive"])
+async def set_status(prescription_id: int, rqt: PrescriptionRequest):
+    set_prescription_status(conn, prescription_id, rqt.active_flag)
     return JSONResponse(
         status_code=200, content={"message": "Prescription status updated"}
     )

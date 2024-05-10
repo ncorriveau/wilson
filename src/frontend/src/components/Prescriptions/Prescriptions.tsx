@@ -57,7 +57,12 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
             try {
                 const updatedPrescription = { ...prescription, isActive: !prescription.isActive };
                 console.log('updatedPrescription ', updatedPrescription)
-                const response = await axios.put(`${apiUrl}status/${prescription.id}`, updatedPrescription, {
+                const response = await axios.put(`${apiUrl}status/${prescription.id}`, 
+                {
+                    id: updatedPrescription.id,
+                    isActive: updatedPrescription.isActive,
+                
+                }, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     }
