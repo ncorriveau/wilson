@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import './Prescriptions.css';
 
 interface PrescriptionProps {
   token: string;
@@ -13,12 +14,12 @@ interface ProviderInfo  {
 }
 
 interface Prescription {
-    id: number;
-    brandName: string;
-    technicalName: string;
-    instructions: string;
-    providerInfo: ProviderInfo;
-    isActive: boolean;
+id: number;
+brandName: string;
+technicalName: string;
+instructions: string;
+providerInfo: ProviderInfo;
+isActive: boolean;
 }
 
 
@@ -55,7 +56,8 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
         if (window.confirm("Are you sure you want to change the status of this prescription?")) {
             try {
                 const updatedPrescription = { ...prescription, isActive: !prescription.isActive };
-                const response = await axios.put(`${apiUrl}${prescription.id}`, updatedPrescription, {
+                console.log('updatedPrescription ', updatedPrescription)
+                const response = await axios.put(`${apiUrl}status/${prescription.id}`, updatedPrescription, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     }

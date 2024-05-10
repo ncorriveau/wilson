@@ -522,6 +522,17 @@ def get_prescriptions_by_id(conn: connection, user_id: int) -> Dict[str, str]:
     return results
 
 
+def set_prescription_status(
+    conn: connection, prescription_id: int, status: bool
+) -> None:
+    query = f"""
+    UPDATE prescriptions
+    SET active_flag = {status}
+    WHERE id = {prescription_id}
+    """
+    insert_row(conn, query, {})
+
+
 def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, str]:
     user = get_user_by_email(conn, email)
     logger.info(f"User: {user}")
@@ -546,7 +557,6 @@ if __name__ == "__main__":
     }
     conn = create_connection()
     try:
-        print(get_prescriptions_by_id(conn, 1))
-
+        print(set_prescription_status(conn, 1, False))
     except Exception as e:
         raise e

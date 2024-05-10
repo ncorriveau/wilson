@@ -5,6 +5,7 @@ from pprint import pprint
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
@@ -12,7 +13,11 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 
 from ...db.nosql_db import get_provider_by_npi
-from ...db.relational_db import create_connection, get_prescriptions_by_id
+from ...db.relational_db import (
+    create_connection,
+    get_prescriptions_by_id,
+    set_prescription_status,
+)
 from ...deps import get_current_user
 from .appointments import FollowUps, SpecialtyEnum, specialties
 
@@ -72,7 +77,8 @@ def get_prescriptions(
     return prescription_models
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+# dependencies=[Depends(get_current_user)]
+router = APIRouter()
 
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_db_client["wilson_ai"]
@@ -84,6 +90,15 @@ provider_collection = db.providers
 async def prescriptions(user_id: int):
     prescriptions = get_prescriptions(user_id, conn, provider_collection)
     return [prescription.model_dump(by_alias=False) for prescription in prescriptions]
+
+
+@router.put("/status/{prescription_id}")
+async def set_status(prescription_id: int, prescription: Dict[str, Any]):
+    print(prescription)
+    set_prescription_status(conn, prescription_id, prescription["isActive"])
+    return JSONResponse(
+        status_code=200, content={"message": "Prescription status updated"}
+    )
 
 
 if __name__ == "__main__":
