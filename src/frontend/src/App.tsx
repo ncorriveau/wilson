@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AppointmentManager from "./components/Appointments/Appointments";
+import ChatApp from "./components/Chat/ChatApp";
 import LoginPage from "./components/Auth/Login";
 import Prescriptions from "./components/Prescriptions/Prescriptions";
 
@@ -16,7 +17,7 @@ const App = () => {
 
   return (
     <div className="App">
-      { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <Prescriptions token={ token } userId={ userId }/> }
+      { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <ChatApp token={ token } userId={ userId }/> }
     </div>
   );
 };

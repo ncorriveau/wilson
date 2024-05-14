@@ -12,7 +12,7 @@ class OAIRequest(BaseModel):
     """A model to represent a given request to the OpenAI API."""
 
     # required parameters
-    model: str = Field(default="gpt-4-turbo")
+    model: str = Field(default="gpt-4o")
     max_tokens: int = Field(default=1000)
     temperature: float = Field(default=0.1)
     stop: list = Field(default=["```"])

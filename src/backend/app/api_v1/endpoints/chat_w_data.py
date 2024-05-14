@@ -9,7 +9,6 @@ from ...deps import get_current_user
 
 
 class QueryRqt(BaseModel):
-    user_id: int = Field(..., description="The user id of the patient.")
     query: str = Field(..., description="Query to be executed on the data")
 
 
@@ -17,10 +16,10 @@ class QueryRqt(BaseModel):
 router = APIRouter()
 
 
-@router.post("/")
-async def query_data(query_rqt: QueryRqt):
+@router.post("/{user_id}")
+async def query_data(user_id: int, query_rqt: QueryRqt):
     index = build_index(embed_model_llamaindex)
-    response = query_documents(query_rqt.query, query_rqt.user_id, index)
+    response = query_documents(query_rqt.query, user_id, index)
     return response
 
 
