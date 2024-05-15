@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from pprint import pprint
@@ -146,6 +147,7 @@ DO UPDATE SET
     summary = EXCLUDED.summary, 
     follow_ups = EXCLUDED.follow_ups, 
     perscriptions = EXCLUDED.perscriptions
+RETURNING id
 """
 
 CREATE_USER_QUERY = """
@@ -183,19 +185,34 @@ VALUES (%(first_name)s, %(last_name)s, %(degree)s, %(email)s, %(npi)s, %(special
 RETURNING id
 """
 
-CREATE_PERSCRIPTION_QUERY = """
-CREATE TABLE IF NOT EXISTS perscriptions (
+CREATE_PRESCRIPTION_QUERY = """
+CREATE TABLE IF NOT EXISTS prescriptions (
     id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
+    appointment_id INT NOT NULL REFERENCES appointment(id),
     brand_name TEXT NOT NULL,
     technical_name TEXT NOT NULL,
+    instructions TEXT,
+    active_flag BOOLEAN DEFAULT TRUE,
+    provider_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 
-INSERT_PERSCRIPTION_QUERY = """
-INSERT INTO perscriptions (brand_name, technical_name)
-VALUES (%s, %s)
+INSERT_PRESCRIPTION_QUERY = """
+INSERT INTO prescriptions (user_id, appointment_id, brand_name, technical_name, instructions, provider_id)
+VALUES (%(user_id)s, %(appointment_id)s, %(brand_name)s, %(technical_name)s, %(instructions)s, %(provider_id)s)
 """
+
+UPSERT_PRESCRIPTION_QUERY = """
+INSERT INTO prescriptions (user_id, appointment_id, brand_name, technical_name, instructions, provider_id)
+VALUES (%(user_id)s, %(appointment_id)s, %(brand_name)s, %(technical_name)s, %(instructions)s, %(provider_id)s)
+ON CONFLICT (user_id, appointment_id, brand_name)
+DO UPDATE SET 
+    instructions = EXCLUDED.instructions,
+    active_flag = TRUE
+"""
+
 
 CREATE_PROVIDER_TO_INSURANCE_QUERY = """
 CREATE TABLE IF NOT EXISTS provider_to_insurance (
@@ -251,7 +268,7 @@ CREATE_QUERIES = [
     CREATE_INSURANCE_QUERY,
     CREATE_USER_QUERY,
     CREATE_PROVIDER_QUERY,
-    CREATE_PERSCRIPTION_QUERY,
+    CREATE_PRESCRIPTION_QUERY,
     CREATE_PROVIDER_TO_INSURANCE_QUERY,
     CREATE_USER_TO_INSURANCE_QUERY,
     CREATE_SPECIALTIES_QUERY,
@@ -288,7 +305,23 @@ def create_table(conn: connection, create_queries: List[str]) -> None:
 
 
 def upsert_appointment(conn: connection, params: Dict[str, str]) -> None:
-    insert_row(conn, UPSERT_APPOINTMENT_QUERY, params)
+    return insert_row_return(conn, UPSERT_APPOINTMENT_QUERY, params)
+
+
+def upsert_prescription(conn: connection, params: Dict[str, str]) -> None:
+    if isinstance(params["perscriptions"], str):
+        try:
+            prescriptions = json.loads(params["perscriptions"])
+        except json.JSONDecodeError:
+            print(f"Could not decode prescription: {prescription}")
+    else:
+        prescriptions = params["perscriptions"]
+
+    for prescription in prescriptions["drugs"]:
+        prescription["appointment_id"] = params["appointment_id"]
+        prescription["user_id"] = params["user_id"]
+        prescription["provider_id"] = params["provider_id"]
+        insert_row(conn, UPSERT_PRESCRIPTION_QUERY, prescription)
 
 
 def insert_location(conn: connection, params: Dict[str, str]) -> None:
@@ -479,6 +512,27 @@ def get_user_by_email(conn: connection, email: str) -> Dict[str, str]:
     return results[0]
 
 
+def get_prescriptions_by_id(conn: connection, user_id: int) -> Dict[str, str]:
+    query = f"""
+    SELECT id, user_id, brand_name, technical_name, instructions, provider_id, active_flag
+    FROM prescriptions 
+    WHERE user_id = '{user_id}'
+    """
+    results = query_db(conn, query)
+    return results
+
+
+def set_prescription_status(
+    conn: connection, prescription_id: int, status: bool
+) -> None:
+    query = f"""
+    UPDATE prescriptions
+    SET active_flag = {status}
+    WHERE id = {prescription_id}
+    """
+    insert_row(conn, query, {})
+
+
 def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, str]:
     user = get_user_by_email(conn, email)
     logger.info(f"User: {user}")
@@ -492,49 +546,17 @@ def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, 
 
 
 if __name__ == "__main__":
-    appointment_meta = {
-        "AppointmentMeta": {
-            "provider_info": {
-                "first_name": "Ella",
-                "last_name": "Leers",
-                "degree": "MD",
-                "email": None,
-                "phone_number": None,
-                "npi": "1609958305",
-                "address": {
-                    "street": "2 Northside Piers Apt 3C",
-                    "city": "New York",
-                    "state": "Brooklyn",
-                    "zip_code": "11249",
-                },
-                "specialty": "PCP",
-            },
-            "date": "2023-09-12",
-        },
+    params = {
+        "user_id": 1,
+        "provider_id": "1568424935",
+        "filename": "data",
+        "summary": "The patient has been experiencing a chronic cough for three years, associated with symptoms like throat clearing, intermittent dry cough, recurrent heartburn, postnasal drip, and chest tightness during physical activity. Despite previous treatments including Albuterol, Astelin spray, and Prevacid, the cough has persisted. Current recommendations include using Fluticasone spray, Nexium 40 mg daily for two months, and consultations with Allergy and Gastroenterology specialists.",
+        "appointment_datetime": "2023-09-26 11:30",
+        "follow_ups": '{"tasks": [{"task": "Consult Allergy and GI specialists."}, {"task": "AMB REF to Allergy & Clinical Immunology."}, {"task": "AMB REF to Gastroenterology."}]}',
+        "perscriptions": '{"drugs": [{"technical_name": "esomeprazole", "brand_name": "NEXIUM", "instructions": "Take 1 capsule by mouth every morning before breakfast."}, {"technical_name": "fluticasone propionate", "brand_name": "FLONASE", "instructions": "2 sprays in each nostril once daily."}, {"technical_name": "naproxen", "brand_name": "NAPROSYN", "instructions": "Take 1 tablet by mouth every 12 hours as needed. Stop if GI upset."}, {"technical_name": "azelastine", "brand_name": "ASTELIN", "instructions": "USE NASAL SPRAY AS DIRECTED."}, {"technical_name": "trazodone", "brand_name": "DESYREL", "instructions": "TAKE 1 TO 2 TABLETS BY MOUTH EVERY DAY AT BEDTIME AS NEEDED FOR INSOMNIA."}]}',
     }
     conn = create_connection()
-    # address = appointment_meta["AppointmentMeta"]["provider_info"]["address"]
-    # lat, lng = geocode_address(**address)
-    # print(lat, lng)
-    # results = select_relevant_providers(conn, lat, lng, "ENT")
-    # print(results)
-    # # async def main():
-    # #     async with asyncpg.create_pool(**async_pg_params) as pool:
-    # #         async with pool.acquire() as conn:
-    # #             print(f"Executing statement")
-    # #             await conn.execute(CREATE_APPT_TABLE_QUERY)
-
-    # # asyncio.run(main())
-    data = get_user_appointments(conn, 1)
-    for d in data:
-        formatted_datetime = d["appointment_datetime"].strftime("%m/%d/%Y")
-        item = {
-            "id": d["id"],
-            "date": formatted_datetime,
-            "summary": d["summary"],
-            "perscriptions": d["perscriptions"],
-            "follow_ups": [t["task"] for t in d["follow_ups"]["tasks"]],
-        }
-        pprint(item)
-    # user = authenticate_user(conn, "ncorriveau13@gmail.com", "nickospassword")
-    # print(user)
+    try:
+        print(set_prescription_status(conn, 1, False))
+    except Exception as e:
+        raise e

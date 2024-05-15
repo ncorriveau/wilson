@@ -22,6 +22,7 @@ from ...db.relational_db import (
     get_specialties,
     get_user_appointments,
     upsert_appointment,
+    upsert_prescription,
 )
 from ...db.vector_db import create_hash_id, load_documents
 from ...deps import get_current_user
@@ -297,13 +298,6 @@ class ApptRqt(BaseModel):
     data_location: str = Field(..., description="The location of the data to analyze.")
 
 
-# class ApptResponse(BaseModel):
-#     prescriptions: List[Drug]
-#     provider_info: dict[str, any]
-#     follow_ups: List[str]
-#     summary: str
-
-
 client = AsyncOpenAI()
 redis = aioredis.from_url("redis://localhost")
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
@@ -322,7 +316,7 @@ async def get_cached_data(key: str):
         return await conn.get(key)
 
 
-def insert_vector_db(context, params):
+def insert_vector_db(context, params: dict[str, any]):
     try:
         v_db_params = {k: v for k, v in params.items() if k in METADATA_PARAMS}
         load_documents(context, v_db_params)
@@ -335,10 +329,15 @@ def insert_vector_db(context, params):
         )
 
 
-def insert_db(conn: connection, params):
+def insert_db(conn: connection, params: dict[str, any]):
+    """All necessary relational db inserts are done here."""
     try:
-        upsert_appointment(conn, params)
-        logger.info(f"DB inserted Succesfully")
+        appt_id = upsert_appointment(conn, params)[0]
+        logger.debug(f"Appointment inserted into db with id {appt_id}")
+
+        params.update({"appointment_id": appt_id})
+        upsert_prescription(conn, params)
+        logger.debug(f"Prescriptions inserted into db")
 
     except Exception as e:
         raise HTTPException(
