@@ -16,26 +16,10 @@ const App = () => {
   }
 
   return (
-    <div className="App">
-      { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <ChatApp token={ token } userId={ userId }/> }
-    </div>
+      <div className="App">
+        { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <AppointmentManager token={ token } userId={ userId }/> }
+      </div>
   );
 };
 
 export default App;
-
-// return (
-//   <Router>
-//     <div className="App">
-//       <Routes>
-//         <Route path="/prescriptions" element={ 
-//           !token || !userId ? <LoginPage setToken={handleSetToken} /> : <Prescriptions token={token} userId={userId} />
-//         } />
-//         <Route path="/" element={
-//           !token || !userId ? <LoginPage setToken={handleSetToken} /> : <AppointmentManager token={token} userId={userId} />
-//         } />
-//       </Routes>
-//     </div>
-//   </Router>
-// );
-// };
