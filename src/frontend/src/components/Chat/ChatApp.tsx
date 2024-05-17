@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
-import './ChatApp.css';
+import { Box, Heading } from '@chakra-ui/react';
 
 interface ChatProps {
     token: string;
@@ -41,14 +41,11 @@ const ChatApp: React.FC<ChatProps> = ({userId, token}) => {
     };
 
     return (
-        <div className="chat-app">
-            <header>
-                <h1>Chat with Your Data</h1>
-            </header>
-            <ChatHistory messages={messages} />
-            <ChatInput onSendMessage={handleSendMessage} />
-        </div>
-    );
+        <Box p={5}>
+          <Heading mb={6}>Chat with Your Data</Heading>
+          <ChatHistory messages={messages} />
+          <ChatInput onSendMessage={handleSendMessage} />
+        </Box>
+      );
 };
-
 export default ChatApp;

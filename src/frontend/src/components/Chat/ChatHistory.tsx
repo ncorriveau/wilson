@@ -1,5 +1,5 @@
 import React from 'react';
-import ChatMessage from './ChatMessage';
+import { VStack, Box, Text, useColorModeValue } from '@chakra-ui/react';
 
 interface ChatHistoryProps {
     messages: Array<{ user: string, text: string }>;
@@ -7,12 +7,30 @@ interface ChatHistoryProps {
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages }) => {
     return (
-        <div className="chat-history">
-            {messages.map((message, index) => (
-                <ChatMessage key={index} user={message.user} text={message.text} />
-            ))}
-        </div>
-    );
+        <VStack
+          spacing={4}
+          align="stretch"
+          overflowY="auto"
+          maxH="60vh"
+          p={4}
+          borderWidth="1px"
+          borderRadius="md"
+          bg={useColorModeValue('gray.100', 'gray.700')}
+        >
+          {messages.map((message, index) => (
+            <Box
+              key={index}
+              p={3}
+              bg={useColorModeValue('white', 'gray.800')}
+              borderRadius="md"
+              shadow="sm"
+            >
+              <Text fontSize="sm" color="gray.500">{message.user}</Text>
+              <Text>{message.text}</Text>
+            </Box>
+          ))}
+        </VStack>
+      );
 };
 
 export default ChatHistory;

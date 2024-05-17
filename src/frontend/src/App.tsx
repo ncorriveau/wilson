@@ -16,7 +16,7 @@ const App = () => {
 
   return (
       <div className="App">
-        { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <Prescriptions token={ token } userId={ userId }/> }
+        { !token || !userId ? <LoginPage setToken={handleSetToken} /> : <ChatApp token={ token } userId={ userId }/> }
       </div>
   );
 };
