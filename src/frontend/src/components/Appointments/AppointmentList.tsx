@@ -2,12 +2,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Box,
-  Button,
   Heading,
   Text,
   VStack,
   HStack,
-  Checkbox,
   Icon,
 } from "@chakra-ui/react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";

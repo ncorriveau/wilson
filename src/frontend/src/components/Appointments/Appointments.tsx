@@ -2,10 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import MultiStepConfirmation from "./MultiStepConfirmation";
 import AppointmentList from "./AppointmentList";
-// import "./Appointments.css";
 import axios from "axios";
-import { defineStyle, defineStyleConfig } from '@chakra-ui/react';
-import LoadingWithMessages from "./LoadingWithMessages";
 
 import {
     Box,
@@ -18,7 +15,6 @@ import {
     useToast,
     Stack,
     Icon,
-    DarkMode,
 } from '@chakra-ui/react';
 import { FiUploadCloud } from 'react-icons/fi';
 
@@ -130,7 +126,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
   return (
     <Container maxW="container.md" py={10} centerContent>
       <VStack spacing={5} w="100%" p={6} borderRadius="md" boxShadow="xl">
-        <Heading fontFamily="serif" color="green.800">Upload Appointment Data</Heading>
+        <Heading>Upload Appointment Data</Heading>
         {loading ? (
           <VStack>
             <Spinner size="xl" color="white" />
@@ -160,7 +156,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
             </Stack>
           </Box>
         )}
-        <Button bg="green.800" color="white" onClick={handleSubmit} isLoading={loading} variant="solid" size="lg">
+        <Button colorScheme="green" onClick={handleSubmit} isLoading={loading} variant="solid" size="lg">
           🤖 Analyze your appointment 🤖
         </Button>
         {modalOpen && analysisResults && (
