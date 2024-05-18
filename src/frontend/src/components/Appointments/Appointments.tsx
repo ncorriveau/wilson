@@ -2,9 +2,21 @@ import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import MultiStepConfirmation from "./MultiStepConfirmation";
 import AppointmentList from "./AppointmentList";
-import "./Appointments.css";
 import axios from "axios";
-import LoadingWithMessages from "./LoadingWithMessages";
+
+import {
+    Box,
+    Button,
+    Container,
+    Heading,
+    Text,
+    VStack,
+    Spinner,
+    useToast,
+    Stack,
+    Icon,
+} from '@chakra-ui/react';
+import { FiUploadCloud } from 'react-icons/fi';
 
 interface AppointmentManagerProps {
   token: string;
@@ -18,13 +30,21 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
   const [modalOpen, setModalOpen] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile.type === "application/pdf") {
       setFile(uploadedFile);
     } else {
-      alert("Only PDF files are accepted.");
+      toast({
+        title: 'Invalid file type.',
+        description: 'Please upload a PDF file.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
     }
   }, []);
 
@@ -37,11 +57,17 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
 
   const handleSubmit = async () => {
     if (!file) {
-      alert("Please upload a PDF file.");
-      return;
+        toast({
+          title: 'No file selected.',
+          description: 'Please upload a PDF file before submitting.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
     }
 
-    // this would need to be form eventually
+    // this would need to be form eventually and we send the location of the data
     setLoading(true);
     try {
       const response = await axios.post(`${apiUrl}upload`, 
@@ -62,12 +88,31 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
         console.log(result);
         setAnalysisResults(result);
         setModalOpen(true);
+        toast({
+          title: 'Analysis successful.',
+          description: 'Your appointment data has been analyzed.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
       } else {
-        alert("Failed to process data.");
+        toast({
+          title: 'Analysis failed.',
+          description: 'There was an issue analyzing your appointment data.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (error) {
       console.error("Submission error:", error);
-      alert("An error occurred while submitting data.");
+      toast({
+        title: 'Submission error.',
+        description: 'An error occurred while submitting data.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -79,28 +124,47 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
   };
 
   return (
-    <div className="data-submitter">
-      <h1>Upload Appointment Data</h1>
-      {loading ? (
-        <LoadingWithMessages />
-      ) : (
-        <div {...getRootProps()} className="dropzone">
-          {/* @ts-ignore */}
-          <input {...getInputProps()} />
-          {isDragActive ? (
-            <p>Drop the PDF here ...</p>
-          ) : (
-            <p>Drag 'n' drop a PDF file here, or click to select a file</p>
-          )}
-          {file && <div>Uploaded File: {file.name}</div>}
-        </div>
-      )}
-      <button onClick={handleSubmit}>🤖 Analyze your appointment 🤖</button>
-      {modalOpen && analysisResults && (
-        <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
-      )}
-      <AppointmentList token= {token} userId={ userId }  />
-    </div>
+    <Container maxW="container.md" py={10} centerContent>
+      <VStack spacing={5} w="100%" p={6} borderRadius="md" boxShadow="xl">
+        <Heading>Upload Appointment Data</Heading>
+        {loading ? (
+          <VStack>
+            <Spinner size="xl" color="white" />
+            <Text color="white">Uploading...</Text>
+            <Text color="white">Almost there...</Text>
+          </VStack>
+        ) : (
+          <Box
+            {...getRootProps()}
+            p={5}
+            border="2px dashed"
+            borderColor="gray.300"
+            borderRadius="md"
+            textAlign="center"
+            bg="white"
+            w="100%"
+          >
+            <input {...getInputProps()} />
+            <Stack direction="column" align="center" spacing={2}>
+              <Icon as={FiUploadCloud} boxSize={12} color="green.800" />
+              {isDragActive ? (
+                <Text>Drop the PDF here ...</Text>
+              ) : (
+                <Text>Drag 'n' drop a PDF file here, or click to select a file</Text>
+              )}
+              {file && <Text mt={2}>Uploaded File: {file.name}</Text>}
+            </Stack>
+          </Box>
+        )}
+        <Button colorScheme="green" onClick={handleSubmit} isLoading={loading} variant="solid" size="lg">
+          🤖 Analyze your appointment 🤖
+        </Button>
+        {modalOpen && analysisResults && (
+          <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
+        )}
+        <AppointmentList token={token} userId={userId} />
+      </VStack>
+    </Container>
   );
 };
 

@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import './Prescriptions.css';
+import {
+    Box,
+    Heading,
+    Text,
+    Spinner,
+    HStack,
+    Icon,
+    useColorModeValue,
+  } from '@chakra-ui/react';
+import { CheckCircleIcon, WarningIcon } from '@chakra-ui/icons';
+
+// import './Prescriptions.css';
 
 interface PrescriptionProps {
   token: string;
@@ -28,6 +39,7 @@ const apiUrl = "http://localhost:8000/api/v1/prescriptions/";
 const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
     const [loading, setLoading] = useState(false);
+    const cardBg = useColorModeValue('white', 'gray.800');
 
     useEffect(() => {
         const fetchPrescriptions = async () => {
@@ -81,31 +93,42 @@ const Prescriptions: React.FC<PrescriptionProps> = ({ token, userId }) => {
     };
 
     return (
-        <div className="prescriptions">
-            <h1>Prescriptions</h1>
-            {loading ? (
-                <p>Loading...</p>
-            ) : (
-                prescriptions && prescriptions.map(prescription => (
-                    <div key={prescription.id} className="prescription">
-                        <h2>{prescription.brandName}</h2>
-                        <p>Technical Name: {prescription.technicalName}</p>
-                        <p>Instructions: {prescription.instructions}</p>
-                        <p>Prescribing Physician: {`${prescription.providerInfo.firstName} ${prescription.providerInfo.lastName}, ${prescription.providerInfo.specialty}`}</p>
-                        <div className="status">`
-                            <span
-                                className={`status-icon ${prescription.isActive ? 'active' : 'inactive'}`}
-                                onClick={() => toggleActiveStatus(prescription)}
-                            >
-                                {prescription.isActive ? '✅ ' : '⛔️'}
-                            </span>
-                            {prescription.isActive ? "Active" : "Inactive"}
-                        </div>
-                    </div>
-                ))
-            )}
-        </div>
-    );
-};
-
-export default Prescriptions;
+        <Box p={5}>
+          <Heading mb={6}>Prescriptions</Heading>
+          {loading ? (
+            <Spinner size="xl" />
+          ) : (
+            prescriptions && prescriptions.map(prescription => (
+              <Box
+                key={prescription.id}
+                p={5}
+                shadow="md"
+                borderWidth="1px"
+                borderRadius="md"
+                bg={cardBg}
+                mb={4}
+              >
+                <Heading size="md" mb={2}>{prescription.brandName}</Heading>
+                <Text fontSize="sm" mb={2}><strong>Technical Name:</strong> {prescription.technicalName}</Text>
+                <Text fontSize="sm" mb={2}><strong>Instructions:</strong> {prescription.instructions}</Text>
+                <Text fontSize="sm" mb={2}><strong>Prescribing Physician:</strong> {`${prescription.providerInfo.firstName} ${prescription.providerInfo.lastName}, ${prescription.providerInfo.specialty}`}</Text>
+                <HStack mt={4}>
+                  <Icon
+                    as={prescription.isActive ? CheckCircleIcon : WarningIcon}
+                    color={prescription.isActive ? 'green.500' : 'red.500'}
+                    boxSize={6}
+                    cursor="pointer"
+                    onClick={() => toggleActiveStatus(prescription)}
+                  />
+                  <Text color={prescription.isActive ? 'green.500' : 'red.500'}>
+                    {prescription.isActive ? "Active" : "Inactive"}
+                  </Text>
+                </HStack>
+              </Box>
+            ))
+          )}
+        </Box>
+      );
+    };
+    
+    export default Prescriptions;

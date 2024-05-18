@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HStack, Input, Button, useColorModeValue } from '@chakra-ui/react';
 
 interface ChatInputProps {
     onSendMessage: (message: string) => void;
@@ -7,25 +8,25 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
     const [message, setMessage] = useState<string>('');
 
-    const handleSend = () => {
-        if (message.trim()) {
-            onSendMessage(message);
-            setMessage('');
-        }
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setMessage(e.target.value);
+    const handleSubmit = () => {
+      onSendMessage(message);
+      setMessage('');
     };
-
+  
     return (
-        <div className="chat-input">
-            <input
-                type="text"
-                placeholder="Type your message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyUp={(e) => e.key === 'Enter' && handleSend()}
-            />
-            <button onClick={handleSend}>Send</button>
-        </div>
+      <HStack spacing={2} mt={4}>
+        <Input
+          value={message}
+          onChange={handleChange}
+          placeholder="Type your message..."
+          bg={useColorModeValue('white', 'gray.800')}
+        />
+        <Button onClick={handleSubmit} colorScheme="blue">
+          Send
+        </Button>
+      </HStack>
     );
-};
+  };
 
 export default ChatInput;

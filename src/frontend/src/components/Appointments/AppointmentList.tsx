@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./AppointmentList.css";
+import {
+  Box,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Icon,
+} from "@chakra-ui/react";
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+
 interface Appointment {
   id: number;
   date: string;
@@ -64,47 +73,70 @@ const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) =
     setAppointments(updatedAppointments);
   };
 
-  console.log("appointments: ", appointments);
+  // const handleCheckboxChange = (appointmentId: number, index: number) => {
+  //   const updatedAppointments = appointments.map((appointment) => {
+  //     if (appointment.id === appointmentId) {
+  //       const updatedFollowUps = appointment.follow_ups.map((task, taskIndex) => {
+  //         if (taskIndex === index) {
+  //           return task.completed ? { ...task, completed: false } : { ...task, completed: true };
+  //         }
+  //         return task;
+  //       });
+  //       return { ...appointment, follow_ups: updatedFollowUps };
+  //     }
+  //     return appointment;
+  //   });
+  //   setAppointments(updatedAppointments);
+  // };
 
   return (
-    <div className="appointment-list">
-      <h2>Appointments</h2>
+    <VStack spacing={5} w="100%" mt={10}>
+      <Heading fontFamily="serif" size="lg" color="green.800">Appointments</Heading>
       {appointments.map((appointment) => (
-        <React.Fragment key={appointment.id}>
-          <div
-            className={`appointment-header ${appointment.isOpen ? "open" : ""}`}
-            onClick={() => toggleAppointment(appointment.id)}
-          >
-            <div className={`caret ${appointment.isOpen ? "open" : ""}`}></div>
-            <h2>
-              {appointment.provider_info.first_name}{" "}
-              {appointment.provider_info.last_name} -{" "}
-              {appointment.provider_info.specialty}, {appointment.date}
-            </h2>
-          </div>
+        <Box key={appointment.id} w="100%" p={5} borderWidth="1px" borderRadius="md" boxShadow="md" bg="white">
+          <HStack justifyContent="space-between" onClick={() => toggleAppointment(appointment.id)} cursor="pointer">
+            <Heading fontFamily="serif" size="md">
+              {appointment.provider_info.first_name} {appointment.provider_info.last_name} - {appointment.provider_info.specialty}, {appointment.date}
+            </Heading>
+            <Icon as={appointment.isOpen ? FiChevronUp : FiChevronDown} w={6} h={6} />
+          </HStack>
           {appointment.isOpen && (
-            <div className="appointment-details">
-              <h3>Summary</h3>
-              <p>{appointment.summary}</p>
-              <h3>Prescriptions</h3>
-              <ul>
-                {appointment.prescriptions.drugs.map((drug, index) => (
-                  <li key={index}>
-                    {drug.brand_name}: {drug.instructions}
-                  </li>
-                ))}
-              </ul>
-              <h3>Follow Up Tasks</h3>
-              <ul>
-                {appointment.follow_ups.map((task, index) => (
-                  <li key={index}>{task}</li>
-                ))}
-              </ul>
-            </div>
+            <VStack mt={5} spacing={3} align="start">
+              <Box>
+                <Heading size="sm">Summary</Heading>
+                <Text>{appointment.summary}</Text>
+              </Box>
+              <Box>
+                <Heading size="sm">Prescriptions</Heading>
+                <ul>
+                  {appointment.prescriptions.drugs.map((drug, index) => (
+                    <li key={index}>
+                      <Text>{drug.brand_name}: {drug.instructions}</Text>
+                    </li>
+                  ))}
+                </ul>
+              </Box>
+              <Box>
+                <Heading size="sm">Follow Up Tasks</Heading>
+                <ul>
+                  {appointment.follow_ups.map((task, index) => (
+                    <li key={index}>
+                      <HStack>
+                        {/* <Checkbox
+                          isChecked={task.completed}
+                          onChange={() => handleCheckboxChange(appointment.id, index)}
+                        /> */}
+                        <Text> {task} </Text>
+                      </HStack>
+                    </li>
+                  ))}
+                </ul>
+              </Box>
+            </VStack>
           )}
-        </React.Fragment>
+        </Box>
       ))}
-    </div>
+    </VStack>
   );
 };
 
