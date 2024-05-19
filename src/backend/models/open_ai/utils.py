@@ -13,7 +13,7 @@ class OAIRequest(BaseModel):
 
     # required parameters
     model: str = Field(default="gpt-4o")
-    max_tokens: int = Field(default=1000)
+    max_tokens: int = Field(default=100000)
     temperature: float = Field(default=0.1)
     stop: list = Field(default=["```"])
 
