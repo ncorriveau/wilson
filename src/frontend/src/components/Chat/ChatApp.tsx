@@ -31,7 +31,7 @@ const ChatApp: React.FC<ChatProps> = ({userId, token}) => {
             }
         );
             console.log('response ', response);
-            const botMessage = { user: 'Bot', text: response.data.response };
+            const botMessage = { user: 'Bot', text: response.data };
             setMessages([...messages, userMessage, botMessage]);
         } catch (error) {
             console.error("Error fetching response:", error);

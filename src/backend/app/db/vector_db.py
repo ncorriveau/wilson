@@ -17,8 +17,6 @@ from llama_index.core.base.response.schema import Response
 from llama_index.core.indices.vector_store.base import VectorStoreIndex
 from llama_index.core.schema import Document
 from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 _logger = logging.getLogger(__name__)
@@ -33,20 +31,13 @@ CHAT_W_DATA_SYS_MSG = """You are a word class medical physician who is also an e
 and responding to their questions to the best of your ability. For each query, you will be provided with the most relevant context
 from the patients medical records. Additionally, piece of context will have information about the date of the appointment and the provider's name."""
 
-PERSCRIPTION_USER_MSG = """Based on the following context, please answer the 
+CHAT_W_DATA_USER_MSG = """Based on the following context, please answer the 
 query to the best of your ability. 
 Please note that the context will contain metadata about the date of the appointment and the provider's name.
 If the provider name and date are the same, you can assume it is from the same appointment. 
 Query: {}
 Context: {}
 """
-
-# embed_model_llamaindex = HuggingFaceEmbedding(model_name=HF_EMBED_MODEL)
-embed_model_llamaindex = OpenAIEmbedding(model_name="text-embedding-3-small")
-embed_model_hf = embedding_functions.HuggingFaceEmbeddingFunction(
-    api_key=os.environ["HUGGINGFACE_API_KEY"],
-    model_name=HF_EMBED_MODEL,
-)
 
 embed_model_oai = embedding_functions.OpenAIEmbeddingFunction(
     api_key=os.environ["OPENAI_API_KEY"],
@@ -152,40 +143,26 @@ def query_documents(query: str, user_id: int, index: VectorStoreIndex) -> Respon
 
 
 if __name__ == "__main__":
+    from openai import AsyncOpenAI
 
+    client = AsyncOpenAI()
     _logger.info("Loading documents...")
     context = SimpleDirectoryReader("../data").load_data()
-    load_documents(
-        context,
-        {
-            "user_id": 1,
-            "filename": "appointment_test",
-            "provider_name": "Lissette Giraud",
-            "appointment_datetime": "2023-09-26",
-        },
-    )
 
-    # _logger.info("Building index...")
-    # index = build_index(embed_model_llamaindex)
-
-    # _logger.info("Querying documents...")
-    # response = query_documents("Can you summarize the appointments I've had?", 1, index)
-
-    # print(response)
     db = chromadb.PersistentClient(path=DB_PATH)
     chroma_collection = db.get_or_create_collection(
         COLLECTION, embedding_function=EMBED_MODEL
     )
-    context = get_context(
-        "Can you summarize the appointments I've had?", 1, chroma_collection
-    )
-    # # pprint(context)
-    # pprint(len(context["documents"][0]))
-    # ct = chroma_collection.peek()
-    # context = " ".join(ct["documents"])
-    # for i, msg in enumerate(context["documents"][0]):
-    #     print(f"PRINTING MESSAGE {i}")
-    #     print(msg)
-    organized_context = structure_context(context)
-    print("------- RETURNED CONTEXT --------")
-    pprint(type(organized_context))
+    # query = "What diagnosis would explain my symptoms?"
+    # context = get_context(
+    #     query, 1, chroma_collection
+    # )
+    # organized_context = structure_context(context)
+    # rqt = OAIRequest(
+    #     system_msg=CHAT_W_DATA_SYS_MSG,
+    #     user_msg=CHAT_W_DATA_USER_MSG.format(
+    #         query, organized_context
+    #     ),
+    # )
+    # response = asyncio.run(a_send_rqt_chat(client, rqt))
+    # pprint(response)
