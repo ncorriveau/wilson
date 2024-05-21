@@ -1,32 +1,32 @@
 .prescriptions {
-    padding: 20px;
-    background-color: var(--light-tan);
-    color: var(--custom-green);
+  padding: 20px;
+  background-color: var(--light-tan);
+  color: var(--custom-green);
 }
 
 .prescription {
-    margin-bottom: 20px;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
 }
 
 .status {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 }
 
 .status-icon {
-    display: inline-block;
-    margin-right: 10px;
-    padding: 5px;
-    font-size: 1.5em;
+  display: inline-block;
+  margin-right: 10px;
+  padding: 5px;
+  font-size: 1.5em;
 }
 
 .status-icon.active {
-    color: #4CAF50; /* Green color for active */
+  color: #4caf50; /* Green color for active */
 }
 
 .status-icon.inactive {
-    color: #f44336; /* Red color for inactive */
+  color: #f44336; /* Red color for inactive */
 }

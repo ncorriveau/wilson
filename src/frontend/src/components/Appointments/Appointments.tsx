@@ -5,18 +5,18 @@ import AppointmentList from "./AppointmentList";
 import axios from "axios";
 
 import {
-    Box,
-    Button,
-    Container,
-    Heading,
-    Text,
-    VStack,
-    Spinner,
-    useToast,
-    Stack,
-    Icon,
-} from '@chakra-ui/react';
-import { FiUploadCloud } from 'react-icons/fi';
+  Box,
+  Button,
+  Container,
+  Heading,
+  Text,
+  VStack,
+  Spinner,
+  useToast,
+  Stack,
+  Icon,
+} from "@chakra-ui/react";
+import { FiUploadCloud } from "react-icons/fi";
 
 interface AppointmentManagerProps {
   token: string;
@@ -25,7 +25,10 @@ interface AppointmentManagerProps {
 
 const apiUrl = "http://localhost:8000/api/v1/appointments/";
 
-const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }) => {
+const AppointmentManager: React.FC<AppointmentManagerProps> = ({
+  token,
+  userId,
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
@@ -38,9 +41,9 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
       setFile(uploadedFile);
     } else {
       toast({
-        title: 'Invalid file type.',
-        description: 'Please upload a PDF file.',
-        status: 'error',
+        title: "Invalid file type.",
+        description: "Please upload a PDF file.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -57,31 +60,32 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
 
   const handleSubmit = async () => {
     if (!file) {
-        toast({
-          title: 'No file selected.',
-          description: 'Please upload a PDF file before submitting.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
+      toast({
+        title: "No file selected.",
+        description: "Please upload a PDF file before submitting.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
     }
 
     // this would need to be form eventually and we send the location of the data
     setLoading(true);
     try {
-      const response = await axios.post(`${apiUrl}upload`, 
+      const response = await axios.post(
+        `${apiUrl}upload`,
         {
-            data_location: "data",
-            user_id: userId,
+          data_location: "data",
+          user_id: userId,
         },
         {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        }
-    );
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
       if (response.status === 200) {
         const result = response.data;
@@ -89,17 +93,17 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
         setAnalysisResults(result);
         setModalOpen(true);
         toast({
-          title: 'Analysis successful.',
-          description: 'Your appointment data has been analyzed.',
-          status: 'success',
+          title: "Analysis successful.",
+          description: "Your appointment data has been analyzed.",
+          status: "success",
           duration: 5000,
           isClosable: true,
         });
       } else {
         toast({
-          title: 'Analysis failed.',
-          description: 'There was an issue analyzing your appointment data.',
-          status: 'error',
+          title: "Analysis failed.",
+          description: "There was an issue analyzing your appointment data.",
+          status: "error",
           duration: 5000,
           isClosable: true,
         });
@@ -107,9 +111,9 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
     } catch (error) {
       console.error("Submission error:", error);
       toast({
-        title: 'Submission error.',
-        description: 'An error occurred while submitting data.',
-        status: 'error',
+        title: "Submission error.",
+        description: "An error occurred while submitting data.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
@@ -150,13 +154,21 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({ token, userId }
               {isDragActive ? (
                 <Text>Drop the PDF here ...</Text>
               ) : (
-                <Text>Drag 'n' drop a PDF file here, or click to select a file</Text>
+                <Text>
+                  Drag 'n' drop a PDF file here, or click to select a file
+                </Text>
               )}
               {file && <Text mt={2}>Uploaded File: {file.name}</Text>}
             </Stack>
           </Box>
         )}
-        <Button colorScheme="green" onClick={handleSubmit} isLoading={loading} variant="solid" size="lg">
+        <Button
+          colorScheme="green"
+          onClick={handleSubmit}
+          isLoading={loading}
+          variant="solid"
+          size="lg"
+        >
           🤖 Analyze your appointment 🤖
         </Button>
         {modalOpen && analysisResults && (

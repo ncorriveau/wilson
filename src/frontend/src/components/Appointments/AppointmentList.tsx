@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Icon,
-} from "@chakra-ui/react";
+import { Box, Heading, Text, VStack, HStack, Icon } from "@chakra-ui/react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 interface Appointment {
@@ -37,7 +30,10 @@ interface AppointmentManagerProps {
 
 const apiUrl = "http://localhost:8000/api/v1/appointments/";
 
-const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) => {
+const AppointmentList: React.FC<AppointmentManagerProps> = ({
+  token,
+  userId,
+}) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
@@ -45,9 +41,9 @@ const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) =
       try {
         const response = await axios.get(`${apiUrl}${userId}`, {
           headers: {
-              'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
-      });
+        });
         if (response.status === 200) {
           const data = await response.data;
           const updatedAppointments = data.appointments.map(
@@ -91,14 +87,34 @@ const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) =
 
   return (
     <VStack spacing={5} w="100%" mt={10}>
-      <Heading fontFamily="serif" size="lg" color="green.800">Appointments</Heading>
+      <Heading fontFamily="serif" size="lg" color="green.800">
+        Appointments
+      </Heading>
       {appointments.map((appointment) => (
-        <Box key={appointment.id} w="100%" p={5} borderWidth="1px" borderRadius="md" boxShadow="md" bg="white">
-          <HStack justifyContent="space-between" onClick={() => toggleAppointment(appointment.id)} cursor="pointer">
+        <Box
+          key={appointment.id}
+          w="100%"
+          p={5}
+          borderWidth="1px"
+          borderRadius="md"
+          boxShadow="md"
+          bg="white"
+        >
+          <HStack
+            justifyContent="space-between"
+            onClick={() => toggleAppointment(appointment.id)}
+            cursor="pointer"
+          >
             <Heading fontFamily="serif" size="md">
-              {appointment.provider_info.first_name} {appointment.provider_info.last_name} - {appointment.provider_info.specialty}, {appointment.date}
+              {appointment.provider_info.first_name}{" "}
+              {appointment.provider_info.last_name} -{" "}
+              {appointment.provider_info.specialty}, {appointment.date}
             </Heading>
-            <Icon as={appointment.isOpen ? FiChevronUp : FiChevronDown} w={6} h={6} />
+            <Icon
+              as={appointment.isOpen ? FiChevronUp : FiChevronDown}
+              w={6}
+              h={6}
+            />
           </HStack>
           {appointment.isOpen && (
             <VStack mt={5} spacing={3} align="start">
@@ -111,7 +127,9 @@ const AppointmentList: React.FC<AppointmentManagerProps> = ({ token, userId }) =
                 <ul>
                   {appointment.prescriptions.drugs.map((drug, index) => (
                     <li key={index}>
-                      <Text>{drug.brand_name}: {drug.instructions}</Text>
+                      <Text>
+                        {drug.brand_name}: {drug.instructions}
+                      </Text>
                     </li>
                   ))}
                 </ul>
