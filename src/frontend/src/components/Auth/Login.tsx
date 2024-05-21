@@ -30,6 +30,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ setToken }) => {
         },
       );
       console.log("user id is: ", response.data.userId);
+      localStorage.setItem("token", response.data.access_token);
+      localStorage.setItem("userId", response.data.userId);
       setToken(response.data.access_token, response.data.userId);
     } catch (error) {
       setError("Invalid username or password");
