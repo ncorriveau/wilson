@@ -57,7 +57,9 @@ def send_rqt(client: OpenAI, rqt: OAIRequest) -> Type[BaseModel]:
     return rqt.response_schema.model_validate_json(response.choices[0].message.content)
 
 
-async def a_send_rqt(client: AsyncOpenAI, rqt: OAIRequest) -> Type[BaseModel]:
+async def a_send_rqt(
+    client: AsyncOpenAI, rqt: OAIRequest, response_json: bool = True
+) -> Type[BaseModel]:
     """Extracts information from a given document using the OpenAI API."""
     response = await client.chat.completions.create(
         model=rqt.model,
@@ -70,7 +72,7 @@ async def a_send_rqt(client: AsyncOpenAI, rqt: OAIRequest) -> Type[BaseModel]:
             {"role": "assistant", "content": rqt.assistant_msg},
         ],
         tools=rqt.tools,
-        response_format={"type": "json_object"} if rqt.model != "gpt-4" else None,
+        response_format={"type": "json_object"} if response_json else None,
     )
 
     if not rqt.response_schema:
