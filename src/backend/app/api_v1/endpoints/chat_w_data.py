@@ -1,4 +1,5 @@
 import io
+import logging
 
 import chromadb
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
@@ -17,9 +18,13 @@ from ...db.vector_db import (
 )
 from ...deps import get_current_user
 
+logger = logging.getLogger(__name__)
+
 CHAT_W_DATA_SYS_MSG = """You are a word class medical physician who is also an expert in Q&A and you will assist in analyzing this patient's medical records
 and responding to their questions to the best of your ability. For each query, you will be provided with the most relevant context
-from the patients medical records. Additionally, piece of context will have information about the date of the appointment and the provider's name."""
+from the patients medical records. Additionally, piece of context will have information about the date of the appointment and the provider's name.
+Please do not start talking about the users appointment data unless they ask questions about it or require the 
+context of their appointments."""
 
 CHAT_W_DATA_USER_MSG = """Based on the following context, please answer the 
 query to the best of your ability. 
@@ -43,6 +48,7 @@ collection = db.get_or_create_collection(COLLECTION, embedding_function=EMBED_MO
 
 @router.post("/{user_id}")
 async def query_data(user_id: int, query_rqt: QueryRqt):
+    logger.info(f"Querying data for user {user_id} with query: {query_rqt.query}")
     context = get_context(query_rqt.query, user_id, collection)
     structured_context = structure_context(context)
     rqt = OAIRequest(
@@ -50,7 +56,6 @@ async def query_data(user_id: int, query_rqt: QueryRqt):
         user_msg=CHAT_W_DATA_USER_MSG.format(query_rqt.query, structured_context),
     )
     response = await a_send_rqt(client, rqt, response_json=False)
-    print(response)
     return response
 
 
