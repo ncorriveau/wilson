@@ -1,13 +1,26 @@
 import json
 import logging
+import os
 import time
 from datetime import datetime
 from enum import Enum
 from pprint import pprint
 from typing import List, Type
+from uuid import uuid4
 
 import aioredis
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+import boto3
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import JSONResponse
 from llama_index.core import SimpleDirectoryReader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
@@ -28,6 +41,12 @@ from ...db.vector_db import create_hash_id, load_documents
 from ...deps import get_current_user
 
 logger = logging.getLogger(__name__)
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+
 
 METADATA_PARAMS = [
     "user_id",
@@ -295,7 +314,9 @@ class AppointmentAnalysis:
 
 class ApptRqt(BaseModel):
     user_id: int = Field(..., description="The user id of the patient.")
-    data_location: str = Field(..., description="The location of the data to analyze.")
+    data_location: str = Field(
+        ..., description="The location of the data to analyze. Must be a valid s3 uri."
+    )
 
 
 client = AsyncOpenAI()
@@ -304,6 +325,12 @@ mongo_db_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=AWS_REGION,
+)
 
 
 async def cache_data(key: str, value: str, expire: int = 3600):
@@ -349,6 +376,28 @@ router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.post("/upload")
+async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    # for now we just want to accept pdfs
+    if not file.content_type == "application/pdf":
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Please upload a PDF."
+        )
+    try:
+        file_key = f"{x_user_id}/pdf/{uuid4()}_{file.filename}"
+        s3_client.upload_fileobj(
+            file.file,
+            S3_BUCKET_NAME,
+            file_key,
+            ExtraArgs={"ContentType": file.content_type, "ACL": "private"},
+        )
+        s3_uri = f"s3://{S3_BUCKET_NAME}/{file_key}"
+        return {"s3_uri": s3_uri}
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@router.post("/analyze")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
     context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
     text = " ".join([doc.text for doc in context])
