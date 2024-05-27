@@ -11,8 +11,6 @@ import {
 } from "@chakra-ui/react";
 import { CheckCircleIcon, WarningIcon } from "@chakra-ui/icons";
 
-// import './Prescriptions.css';
-
 interface PrescriptionProps {
   token: string;
   userId: string;
