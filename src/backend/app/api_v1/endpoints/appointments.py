@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import aioredis
 import boto3
+from dotenv import load_dotenv
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -21,7 +22,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import JSONResponse
-from llama_index.core import SimpleDirectoryReader
+from llama_index.core import SimpleDirectoryReader, download_loader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, ConfigDict, Field, validator
@@ -39,6 +40,8 @@ from ...db.relational_db import (
 )
 from ...db.vector_db import create_hash_id, load_documents
 from ...deps import get_current_user
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +375,8 @@ def insert_db(conn: connection, params: dict[str, any]):
         )
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+# dependencies=[Depends(get_current_user)]
+router = APIRouter()
 
 
 @router.post("/upload")
@@ -384,11 +388,12 @@ async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...))
         )
     try:
         file_key = f"{x_user_id}/pdf/{uuid4()}_{file.filename}"
+        logger.info(f"Uploading file to s3 with key {file_key}")
         s3_client.upload_fileobj(
             file.file,
             S3_BUCKET_NAME,
             file_key,
-            ExtraArgs={"ContentType": file.content_type, "ACL": "private"},
+            ExtraArgs={"ContentType": file.content_type},
         )
         s3_uri = f"s3://{S3_BUCKET_NAME}/{file_key}"
         return {"s3_uri": s3_uri}
@@ -399,7 +404,15 @@ async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...))
 
 @router.post("/analyze")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
-    context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
+    S3Reader = download_loader("S3Reader")
+    s3_key = appt_rqt.data_location.split(f"s3://{S3_BUCKET_NAME}/")[1]
+    loader = S3Reader(
+        bucket=S3_BUCKET_NAME,
+        key=s3_key,
+        aws_access_id=AWS_ACCESS_KEY_ID,
+        aws_access_secret=AWS_SECRET_ACCESS_KEY,
+    )
+    context = loader.load_data()
     text = " ".join([doc.text for doc in context])
 
     cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
