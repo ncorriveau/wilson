@@ -33,6 +33,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  // const [fileUrl, setFileUrl] = useState<string>("");
   const toast = useToast();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -71,12 +72,28 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
     }
 
     // this would need to be form eventually and we send the location of the data
+    const formData = new FormData();
+    formData.append('file', file);
     setLoading(true);
     try {
-      const response = await axios.post(
+      const uploadResponse = await axios.post(
         `${apiUrl}upload`,
+        formData,
         {
-          data_location: "data",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+            "x_user_id": userId,
+          },
+        },
+      );
+      const s3Uri = uploadResponse.data.s3_uri;
+      console.log("S3 URI: ", s3Uri);
+
+      const response = await axios.post(
+        `${apiUrl}analyze`,
+        {
+          data_location: s3Uri,
           user_id: userId,
         },
         {
