@@ -1,14 +1,28 @@
 import json
 import logging
+import os
 import time
 from datetime import datetime
 from enum import Enum
 from pprint import pprint
 from typing import List, Type
+from uuid import uuid4
 
 import aioredis
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from llama_index.core import SimpleDirectoryReader
+import boto3
+from dotenv import load_dotenv
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.responses import JSONResponse
+from llama_index.core import SimpleDirectoryReader, download_loader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, ConfigDict, Field, validator
@@ -27,7 +41,15 @@ from ...db.relational_db import (
 from ...db.vector_db import create_hash_id, load_documents
 from ...deps import get_current_user
 
+load_dotenv()
+
 logger = logging.getLogger(__name__)
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+
 
 METADATA_PARAMS = [
     "user_id",
@@ -295,7 +317,9 @@ class AppointmentAnalysis:
 
 class ApptRqt(BaseModel):
     user_id: int = Field(..., description="The user id of the patient.")
-    data_location: str = Field(..., description="The location of the data to analyze.")
+    data_location: str = Field(
+        ..., description="The location of the data to analyze. Must be a valid s3 uri."
+    )
 
 
 client = AsyncOpenAI()
@@ -304,6 +328,13 @@ mongo_db_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=AWS_REGION,
+)
+S3Reader = download_loader("S3Reader")
 
 
 async def cache_data(key: str, value: str, expire: int = 3600):
@@ -345,12 +376,45 @@ def insert_db(conn: connection, params: dict[str, any]):
         )
 
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+# dependencies=[Depends(get_current_user)]
+router = APIRouter()
 
 
 @router.post("/upload")
+async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    # for now we just want to accept pdfs
+    logger.info(f"Uploading file {file.filename} for user {x_user_id}")
+    if not file.content_type == "application/pdf":
+        raise HTTPException(
+            status_code=400, detail="Invalid file type. Please upload a PDF."
+        )
+    try:
+        file_key = f"{x_user_id}/pdf/{uuid4()}_{file.filename}"
+        logger.info(f"Uploading file to s3 with key {file_key}")
+        s3_client.upload_fileobj(
+            file.file,
+            S3_BUCKET_NAME,
+            file_key,
+            ExtraArgs={"ContentType": file.content_type},
+        )
+        s3_uri = f"s3://{S3_BUCKET_NAME}/{file_key}"
+        return {"s3_uri": s3_uri}
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": str(e)})
+
+
+@router.post("/analyze")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
-    context = SimpleDirectoryReader(appt_rqt.data_location).load_data()
+    s3_key = appt_rqt.data_location.split(f"s3://{S3_BUCKET_NAME}/")[1]
+    logger.debug(f"Reading data from key = {s3_key}")
+    loader = S3Reader(
+        bucket=S3_BUCKET_NAME,
+        key=s3_key,
+        aws_access_id=AWS_ACCESS_KEY_ID,
+        aws_access_secret=AWS_SECRET_ACCESS_KEY,
+    )
+    context = loader.load_data()
     text = " ".join([doc.text for doc in context])
 
     cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
@@ -362,11 +426,12 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
         appt = AppointmentAnalysis(client, context)
         info = await appt.a_get_info()
         info = {k: v.model_dump() for k, v in info.items()}  # make serializable
+        logger.debug(f"Caching info = {pprint(info)}")
         await cache_data(cache_key, json.dumps(info))
 
     logger.info(f"info = {pprint(info)}")
 
-    provider_info = info.get("AppointmentMeta", {}).get("provider_info")
+    provider_info: dict[str, any] = info.get("AppointmentMeta", {}).get("provider_info")
     if not provider_info.get("npi"):
         provider_info["npi"] = await get_provider_id(provider_collection, provider_info)
     else:
