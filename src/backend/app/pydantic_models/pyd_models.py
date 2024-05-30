@@ -223,3 +223,45 @@ class UserInfo(BaseModel):
 class FollowUpRqt(BaseModel):
     user_info: UserInfo = Field(..., description="Information regarding the user.")
     follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
+
+
+### PRESCRIPTION MODELS ###
+class ProviderInfo(BaseModel):
+    firstName: str = Field(
+        ..., description="The id of the provider.", alias="first_name"
+    )
+    lastName: str = Field(
+        ..., description="The name of the provider.", alias="last_name"
+    )
+    specialty: SpecialtyEnum = Field(..., description="The specialty of the provider.")  # type: ignore
+
+
+class PrescriptionResponse(BaseModel):
+    id: int = Field(..., description="The id of the prescription.")
+    brandName: str = Field(
+        ..., description="The brand name of the prescription.", alias="brand_name"
+    )
+    technicalName: str = Field(
+        ...,
+        description="The technical name of the prescription.",
+        alias="technical_name",
+    )
+    instructions: str = Field(..., description="The instructions for the prescription.")
+    providerInfo: ProviderInfo = Field(
+        ...,
+        description="The provider information for the prescription.",
+        alias="provider_info",
+    )
+    isActive: bool = Field(
+        ..., description="The active status of the prescription.", alias="active_flag"
+    )
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class PrescriptionRequest(BaseModel):
+    id: int = Field(..., description="The id of the prescription.")
+    active_flag: bool = Field(
+        ..., description="The active status of the prescription.", alias="isActive"
+    )

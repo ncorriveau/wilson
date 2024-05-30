@@ -4,9 +4,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
-from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
@@ -16,51 +14,9 @@ from ...db.relational_db import (
     get_prescriptions_by_id,
     set_prescription_status,
 )
-from ...deps import get_current_user
-from .appointments import SpecialtyEnum
+from ...pydantic_models.pyd_models import PrescriptionRequest, PrescriptionResponse
 
 logger = logging.getLogger(__name__)
-
-
-class ProviderInfo(BaseModel):
-    firstName: str = Field(
-        ..., description="The id of the provider.", alias="first_name"
-    )
-    lastName: str = Field(
-        ..., description="The name of the provider.", alias="last_name"
-    )
-    specialty: SpecialtyEnum = Field(..., description="The specialty of the provider.")  # type: ignore
-
-
-class PrescriptionResponse(BaseModel):
-    id: int = Field(..., description="The id of the prescription.")
-    brandName: str = Field(
-        ..., description="The brand name of the prescription.", alias="brand_name"
-    )
-    technicalName: str = Field(
-        ...,
-        description="The technical name of the prescription.",
-        alias="technical_name",
-    )
-    instructions: str = Field(..., description="The instructions for the prescription.")
-    providerInfo: ProviderInfo = Field(
-        ...,
-        description="The provider information for the prescription.",
-        alias="provider_info",
-    )
-    isActive: bool = Field(
-        ..., description="The active status of the prescription.", alias="active_flag"
-    )
-
-    class Config:
-        allow_population_by_field_name = True
-
-
-class PrescriptionRequest(BaseModel):
-    id: int = Field(..., description="The id of the prescription.")
-    active_flag: bool = Field(
-        ..., description="The active status of the prescription.", alias="isActive"
-    )
 
 
 def get_prescriptions(
