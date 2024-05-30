@@ -15,6 +15,7 @@ from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_relevant_providers
 from ...deps import get_current_user
 from ...pydantic_models.pyd_models import FollowUpRqt, TaskSpecialty, specialties
+from ...utils.utils import get_locations
 from .appointments import FollowUps
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ async def get_followup_suggestions(
 
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
-
+locations = get_locations()
 client = AsyncOpenAI()
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_db_client["wilson_ai"]

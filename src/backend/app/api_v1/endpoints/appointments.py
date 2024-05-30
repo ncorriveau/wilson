@@ -45,6 +45,7 @@ from ...pydantic_models.pyd_models import (
     Summary,
     specialties,
 )
+from ...utils.utils import get_locations
 
 load_dotenv()
 
@@ -62,10 +63,10 @@ METADATA_PARAMS = [
     "filename",
     "appointment_date",
 ]
-
+locations = get_locations()
 client = AsyncOpenAI()
-redis = aioredis.from_url("redis://localhost")
-mongo_db_client = MongoClient("mongodb://localhost:27017/")
+redis = aioredis.from_url(locations["redis_url"])
+mongo_db_client = MongoClient(locations["mongo_url"])
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()

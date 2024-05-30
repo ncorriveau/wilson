@@ -15,6 +15,7 @@ from ...db.relational_db import (
     set_prescription_status,
 )
 from ...pydantic_models.pyd_models import PrescriptionRequest, PrescriptionResponse
+from ...utils.utils import get_locations
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ def get_prescriptions(
 
 # dependencies=[Depends(get_current_user)]
 router = APIRouter()
-
-mongo_db_client = MongoClient("mongodb://localhost:27017/")
+locations = get_locations()
+mongo_db_client = MongoClient(locations["mongo_url"])
 db = mongo_db_client["wilson_ai"]
 conn = create_connection()
 provider_collection = db.providers
