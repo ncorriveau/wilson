@@ -202,3 +202,24 @@ class ApptRqt(BaseModel):
     data_location: str = Field(
         ..., description="The location of the data to analyze. Must be a valid s3 uri."
     )
+
+
+#### FOLLOW UP MODELS ####
+class TaskSpecialty(BaseModel):
+    """A model to represent the correct specialty to book with given an associated follow up tasks"""
+
+    specialty: SpecialtyEnum | None = Field(  # type: ignore
+        default=None, description="""The specialty of the provider"""
+    )
+
+
+class UserInfo(BaseModel):
+    user_id: int = Field(..., description="The user id of the patient.")
+    lat: float = Field(..., description="The latitude of the user.")
+    lng: float = Field(..., description="The longitude of the user.")
+    insurance_id: int = Field(..., description="The insurance id of the user.")
+
+
+class FollowUpRqt(BaseModel):
+    user_info: UserInfo = Field(..., description="Information regarding the user.")
+    follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
