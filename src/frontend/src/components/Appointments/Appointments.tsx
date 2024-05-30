@@ -71,10 +71,10 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
       return;
     }
 
-    // this would need to be form eventually and we send the location of the data
     const formData = new FormData();
     formData.append('file', file);
     setLoading(true);
+    console.log('Sending file to server')
     try {
       const uploadResponse = await axios.post(
         `${apiUrl}upload`,
@@ -83,7 +83,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
-            "x_user_id": userId,
+            "x-user-id": userId,
           },
         },
       );

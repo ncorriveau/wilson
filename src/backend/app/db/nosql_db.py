@@ -65,7 +65,7 @@ def upsert_provider(
 ) -> UpdateResult:
     """insert or update provider info in db"""
     if provider_info["location"]:
-        lat, lng = geocode_address(provider_info["location"])
+        lat, lng = geocode_address(**provider_info["location"])
         provider_info["location"]["coordinates"] = {"lat": lat, "long": lng}
 
     result = collection.update_one(

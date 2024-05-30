@@ -12,18 +12,18 @@ from psycopg2.extensions import connection
 
 from ..security.auth import verify_password
 
-logger = logging.getLogger(__name__)
+GOOGE_MAPS_API = "https://maps.googleapis.com/maps/api/geocode/json"
 
+logger = logging.getLogger(__name__)
 password = os.getenv("POSTGRES_PASSWORD")
+api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 
 def geocode_address(street, city, state, zip_code):
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     country = "US"  # assume this is true for now...
-
     address = f"{street}, {city}, {state}, {zip_code}, {country}"
     response = requests.get(
-        "https://maps.googleapis.com/maps/api/geocode/json",
+        GOOGE_MAPS_API,
         params={"address": address, "key": api_key},
     )
     response.raise_for_status()

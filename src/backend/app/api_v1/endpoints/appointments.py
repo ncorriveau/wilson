@@ -334,6 +334,7 @@ s3_client = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=AWS_REGION,
 )
+S3Reader = download_loader("S3Reader")
 
 
 async def cache_data(key: str, value: str, expire: int = 3600):
@@ -382,6 +383,7 @@ router = APIRouter()
 @router.post("/upload")
 async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...)):
     # for now we just want to accept pdfs
+    logger.info(f"Uploading file {file.filename} for user {x_user_id}")
     if not file.content_type == "application/pdf":
         raise HTTPException(
             status_code=400, detail="Invalid file type. Please upload a PDF."
@@ -404,8 +406,8 @@ async def upload_pdf(file: UploadFile = File(...), x_user_id: str = Header(...))
 
 @router.post("/analyze")
 async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTasks):
-    S3Reader = download_loader("S3Reader")
     s3_key = appt_rqt.data_location.split(f"s3://{S3_BUCKET_NAME}/")[1]
+    logger.debug(f"Reading data from key = {s3_key}")
     loader = S3Reader(
         bucket=S3_BUCKET_NAME,
         key=s3_key,
@@ -424,11 +426,12 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
         appt = AppointmentAnalysis(client, context)
         info = await appt.a_get_info()
         info = {k: v.model_dump() for k, v in info.items()}  # make serializable
+        logger.debug(f"Caching info = {pprint(info)}")
         await cache_data(cache_key, json.dumps(info))
 
     logger.info(f"info = {pprint(info)}")
 
-    provider_info = info.get("AppointmentMeta", {}).get("provider_info")
+    provider_info: dict[str, any] = info.get("AppointmentMeta", {}).get("provider_info")
     if not provider_info.get("npi"):
         provider_info["npi"] = await get_provider_id(provider_collection, provider_info)
     else:
