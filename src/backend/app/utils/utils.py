@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 from enum import Enum
 from typing import Any, Dict
@@ -51,6 +53,18 @@ def get_locations() -> Dict[str, str]:
         "mongo_db": construct_mongo_url(config),
         "redis": construct_redis_url(config),
     }
+
+
+def create_hash_id(context: str, metadata: Dict[str, str]) -> str:
+    """Create unique hash id for document + meta data to use as document id."""
+    json_string = json.dumps(metadata) + context
+
+    # Create a SHA256 hash object
+    hash_object = hashlib.sha256()
+    hash_object.update(json_string.encode())
+    hash_hex = hash_object.hexdigest()
+
+    return hash_hex
 
 
 if __name__ == "__main__":

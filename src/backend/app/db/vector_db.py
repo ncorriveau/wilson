@@ -1,7 +1,5 @@
 """Functions to aid in the indexing and storing of data in a vector database """
 
-import hashlib
-import json
 import logging
 import os
 from collections import defaultdict
@@ -18,6 +16,8 @@ from llama_index.core.indices.vector_store.base import VectorStoreIndex
 from llama_index.core.schema import Document
 from llama_index.core.vector_stores import MetadataFilter, MetadataFilters
 from llama_index.vector_stores.chroma import ChromaVectorStore
+
+from ..utils.utils import create_hash_id
 
 _logger = logging.getLogger(__name__)
 
@@ -45,18 +45,6 @@ embed_model_oai = embedding_functions.OpenAIEmbeddingFunction(
 )
 
 EMBED_MODEL = embed_model_oai
-
-
-def create_hash_id(context: str, metadata: Dict[str, str]) -> str:
-    """Create unique hash id for document + meta data to use as document id."""
-    json_string = json.dumps(metadata) + context
-
-    # Create a SHA256 hash object
-    hash_object = hashlib.sha256()
-    hash_object.update(json_string.encode())
-    hash_hex = hash_object.hexdigest()
-
-    return hash_hex
 
 
 def load_documents(documents: List[Document], metadata: Dict[Any, Any]) -> None:

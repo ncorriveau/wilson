@@ -35,7 +35,7 @@ from ...db.relational_db import (
     upsert_appointment,
     upsert_prescription,
 )
-from ...db.vector_db import create_hash_id, load_documents
+from ...db.vector_db import load_documents
 from ...deps import get_current_user
 from ...pydantic_models.pyd_models import (
     AppointmentMeta,
@@ -45,7 +45,7 @@ from ...pydantic_models.pyd_models import (
     Summary,
     specialties,
 )
-from ...utils.utils import get_locations
+from ...utils.utils import create_hash_id, get_locations
 
 load_dotenv()
 
