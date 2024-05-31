@@ -14,31 +14,18 @@ from pymongo.collection import Collection
 from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_relevant_providers
 from ...deps import get_current_user
-from .appointments import FollowUps, SpecialtyEnum, specialties
+from ...pydantic_models.pyd_models import FollowUpRqt, TaskSpecialty, specialties
+from ...utils.utils import get_locations
+from .appointments import FollowUps
 
 logger = logging.getLogger(__name__)
-
-
-class TaskSpecialty(BaseModel):
-    """A model to represent the correct specialty to book with given an associated follow up tasks"""
-
-    specialty: SpecialtyEnum | None = Field(  # type: ignore
-        default=None, description="""The specialty of the provider"""
-    )
-
-
-class UserInfo(BaseModel):
-    user_id: int = Field(..., description="The user id of the patient.")
-    lat: float = Field(..., description="The latitude of the user.")
-    lng: float = Field(..., description="The longitude of the user.")
-    insurance_id: int = Field(..., description="The insurance id of the user.")
 
 
 SYSTEM_MSG = """
 You are an expert medical assistant and are helping us match physician follow up tasks
 to the right type of specialty. You will be provided with follow up tasks by a doctor e.g. 
 "Consult an ENT". You will also be provided a list of physician specialties such as ORTHO and ENT. 
-For each task, your job is to match the etask with a specialty provided a list of specialties. 
+For each task, your job is to match the task with a specialty provided a list of specialties. 
 Continuing the ENT example, if the list of specialties was presented was [ENT, ORTHO, SPORTS MEDICINE]
 you would return ENT. 
 
@@ -104,13 +91,8 @@ async def get_followup_suggestions(
     return followup_suggestions
 
 
-class FollowUpRqt(BaseModel):
-    user_info: UserInfo = Field(..., description="Information regarding the user.")
-    follow_ups: FollowUps = Field(..., description="Follow up tasks to be executed.")
-
-
 router = APIRouter(dependencies=[Depends(get_current_user)])
-
+locations = get_locations()
 client = AsyncOpenAI()
 mongo_db_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_db_client["wilson_ai"]

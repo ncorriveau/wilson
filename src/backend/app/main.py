@@ -9,9 +9,7 @@ from .api_v1.router import api_router
 
 load_dotenv()
 
-with open(
-    "/Users/nickocorriveau/dev/wilson/src/backend/app/configs/logging_config.yaml", "r"
-) as config_file:
+with open("src/backend/app/utils/logging_config.yaml", "r") as config_file:
     logging_config = yaml.safe_load(config_file)
 
 logging.config.dictConfig(logging_config)

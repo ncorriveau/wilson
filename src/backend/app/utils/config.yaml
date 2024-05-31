@@ -1,0 +1,10 @@
+DEV:
+  mongo: 
+    host: localhost
+    port: 27017
+  redis: 
+    host: localhost
+    port:
+  postgres: 
+    host: localhost
+    port: 5432
