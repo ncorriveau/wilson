@@ -96,6 +96,11 @@ class Summary(BaseModel):
         ...,
         description="""A summary of the doctor's note, including the patient's condition and the doctor's recommendations""",
     )
+    model_config = ConfigDict(
+        json_schema_extra={
+            "summary": "Routine visit for annual physical. No major health concerns, but the provider noticed you had an elevated heart rate. Follow ups include more exercise and a check in on vitals in a month."
+        }
+    )
 
 
 class Location(BaseModel):

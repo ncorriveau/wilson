@@ -65,8 +65,8 @@ METADATA_PARAMS = [
 ]
 locations = get_locations()
 client = AsyncOpenAI()
-redis = aioredis.from_url(locations["redis_url"])
-mongo_db_client = MongoClient(locations["mongo_url"])
+redis = aioredis.from_url(locations["redis"])
+mongo_db_client = MongoClient(locations["mongo_db"])
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()

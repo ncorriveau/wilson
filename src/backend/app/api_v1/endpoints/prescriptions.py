@@ -42,7 +42,7 @@ def get_prescriptions(
 # dependencies=[Depends(get_current_user)]
 router = APIRouter()
 locations = get_locations()
-mongo_db_client = MongoClient(locations["mongo_url"])
+mongo_db_client = MongoClient(locations["mongo_db"])
 db = mongo_db_client["wilson_ai"]
 conn = create_connection()
 provider_collection = db.providers
