@@ -139,6 +139,35 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
     }
   };
 
+  const handleSave = async (updatedData: any) => {
+    try {
+      console.log("Saving data:", updatedData);
+      // await axios.post(`${apiUrl}save`, updatedData, {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //     "Content-Type": "application/json",
+      //   },
+      // });
+      setAnalysisResults(updatedData); // Update the state with the new data
+      toast({
+        title: "Data saved.",
+        description: "Your changes have been saved successfully.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error saving data:", error);
+      toast({
+        title: "Error saving data.",
+        description: "An error occurred while saving data.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleClose = () => {
     console.log("Closing modal and cleaning up");
     setModalOpen(false);
@@ -189,7 +218,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
           🤖 Analyze your appointment 🤖
         </Button>
         {modalOpen && analysisResults && (
-          <MultiStepConfirmation data={analysisResults} onClose={handleClose} />
+          <MultiStepConfirmation data={analysisResults} onClose={handleClose} onSave={handleSave}/>
         )}
         <AppointmentList token={token} userId={userId} />
       </VStack>
