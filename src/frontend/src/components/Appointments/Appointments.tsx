@@ -140,14 +140,15 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
   };
 
   const handleSave = async (updatedData: any) => {
+    console.log("Saving data:", updatedData);
     try {
       console.log("Saving data:", updatedData);
-      // await axios.post(`${apiUrl}save`, updatedData, {
-      //   headers: {
-      //     Authorization: `Bearer ${token}`,
-      //     "Content-Type": "application/json",
-      //   },
-      // });
+      await axios.post(`${apiUrl}${userId}/update_appointment`, updatedData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       setAnalysisResults(updatedData); // Update the state with the new data
       toast({
         title: "Data saved.",

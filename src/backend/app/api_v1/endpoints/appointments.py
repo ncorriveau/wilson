@@ -312,6 +312,11 @@ async def get_appointments(user_id: int):
     return {"appointments": results}
 
 
+@router.post("/{user_id}/update_appointment")
+async def update_infos(user_id: int):
+    return {"good"}
+
+
 if __name__ == "__main__":
     import asyncio
 
