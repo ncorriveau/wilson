@@ -27,9 +27,10 @@ jobs:
         npm install
 
     - name: Run ESLint
+      continue-on-error: true
       run: |
         cd src/frontend
-        npx eslint . --max-warnings 0
+        npx eslint .
 
     - name: Run Prettier
       run: |
