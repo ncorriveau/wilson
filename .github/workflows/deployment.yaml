@@ -35,4 +35,4 @@ jobs:
     - name: Run Prettier
       run: |
         cd src/frontend
-        npm run prettier-check
+        npm run format
