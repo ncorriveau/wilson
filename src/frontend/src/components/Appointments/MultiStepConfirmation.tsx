@@ -54,8 +54,16 @@ const MultiStepConfirmation: React.FC<MultiStepConfirmationProps> = ({
     if (step > 1) setStep(step - 1);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string, index?: number) => {
-    if (field === "first_name" || field === "last_name" || field === "specialty") {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    field: string,
+    index?: number,
+  ) => {
+    if (
+      field === "first_name" ||
+      field === "last_name" ||
+      field === "specialty"
+    ) {
       setFormData({
         ...formData,
         provider_info: {

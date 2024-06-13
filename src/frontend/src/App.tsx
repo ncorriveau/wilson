@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Link,
+  Navigate,
+} from "react-router-dom";
 import AppointmentManager from "./components/Appointments/Appointments";
 import ChatApp from "./components/Chat/ChatApp";
 import LoginPage from "./components/Auth/Login";
 import Prescriptions from "./components/Prescriptions/Prescriptions";
-import './index.css';
+import "./index.css";
 
 const App = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -51,22 +57,34 @@ const App = () => {
             </li>
           </ul>
         </nav>
-        
+
         <Routes>
-        {token && userId ? (
-          <>
-            <Route path="/appointments" element={<AppointmentManager token={token} userId={userId} />} />
-            <Route path="/chat" element={<ChatApp token={token} userId={userId} />} />
-            <Route path="/prescriptions" element={<Prescriptions token={token} userId={userId} />} />
-          </>
-        ) : (
-          <Navigate to="/login" />
-        )}
-        <Route path="/login" element={<LoginPage setToken={handleSetToken} />} />
-      </Routes>
+          {token && userId ? (
+            <>
+              <Route
+                path="/appointments"
+                element={<AppointmentManager token={token} userId={userId} />}
+              />
+              <Route
+                path="/chat"
+                element={<ChatApp token={token} userId={userId} />}
+              />
+              <Route
+                path="/prescriptions"
+                element={<Prescriptions token={token} userId={userId} />}
+              />
+            </>
+          ) : (
+            <Navigate to="/login" />
+          )}
+          <Route
+            path="/login"
+            element={<LoginPage setToken={handleSetToken} />}
+          />
+        </Routes>
       </div>
     </Router>
-  )
+  );
 };
 
 export default App;

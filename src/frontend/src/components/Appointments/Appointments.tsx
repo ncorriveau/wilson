@@ -72,21 +72,17 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
     }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     setLoading(true);
-    console.log('Sending file to server')
+    console.log("Sending file to server");
     try {
-      const uploadResponse = await axios.post(
-        `${apiUrl}upload`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-            "x-user-id": userId,
-          },
+      const uploadResponse = await axios.post(`${apiUrl}upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+          "x-user-id": userId,
         },
-      );
+      });
       const s3Uri = uploadResponse.data.s3_uri;
       console.log("S3 URI: ", s3Uri);
 
@@ -218,7 +214,11 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
           🤖 Analyze your appointment 🤖
         </Button>
         {modalOpen && analysisResults && (
-          <MultiStepConfirmation data={analysisResults} onClose={handleClose} onSave={handleSave}/>
+          <MultiStepConfirmation
+            data={analysisResults}
+            onClose={handleClose}
+            onSave={handleSave}
+          />
         )}
         <AppointmentList token={token} userId={userId} />
       </VStack>
