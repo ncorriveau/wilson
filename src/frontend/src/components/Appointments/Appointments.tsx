@@ -23,6 +23,26 @@ interface AppointmentManagerProps {
   userId: string;
 }
 
+interface ProviderInfo { 
+  first_name: string; 
+  last_name: string; 
+  specialty: string; 
+}
+
+interface Prescription { 
+  technical_name: string; 
+  brand_name: string; 
+  instructions: string; 
+
+}
+
+interface AnalysisResponse {
+  prescriptions: Prescription[]; 
+  provider_info: ProviderInfo; 
+  follow_ups: string[]; 
+  summary: string; 
+}
+
 const apiUrl = "http://localhost:8000/api/v1/appointments/";
 
 const AppointmentManager: React.FC<AppointmentManagerProps> = ({
@@ -31,7 +51,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<any>(null);
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   // const [fileUrl, setFileUrl] = useState<string>("");
   const toast = useToast();
@@ -55,7 +75,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
-    // @ts-ignore
+    // @ts-expect-error  Property 'accept' does not exist on type 'Options'.
     accept: "application/pdf",
   });
 
@@ -135,7 +155,7 @@ const AppointmentManager: React.FC<AppointmentManagerProps> = ({
     }
   };
 
-  const handleSave = async (updatedData: any) => {
+  const handleSave = async (updatedData: AnalysisResponse) => {
     try {
       console.log("Saving data:", updatedData);
       // await axios.post(`${apiUrl}save`, updatedData, {

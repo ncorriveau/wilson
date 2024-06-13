@@ -1,5 +1,9 @@
 import { extendTheme } from "@chakra-ui/react";
 
+interface ThemeProps {
+  colorScheme?: string;
+}
+
 const customTheme = extendTheme({
   colors: {
     green: {
@@ -21,7 +25,7 @@ const customTheme = extendTheme({
         },
       },
       variants: {
-        solid: (props: any) => ({
+        solid: (props: ThemeProps) => ({
           bg: props.colorScheme === "green" ? "green.800" : undefined,
           color: "white",
           _hover: {

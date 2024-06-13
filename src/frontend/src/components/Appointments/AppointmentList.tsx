@@ -59,7 +59,7 @@ const AppointmentList: React.FC<AppointmentManagerProps> = ({
       }
     };
     fetchAppointments();
-  }, [userId]);
+  }, [userId, token]);
 
   const toggleAppointment = (id: number) => {
     const updatedAppointments = appointments.map((appointment) => ({
