@@ -23,8 +23,9 @@ _logger = logging.getLogger(__name__)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+
+DB_PATH = os.getenv("CHROMADB_PATH", "/chroma/chroma")
 COLLECTION = "appointment_oai"
-DB_PATH = "/Users/nickocorriveau/dev/wilson/chroma_db"
 HF_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
 
 CHAT_W_DATA_SYS_MSG = """You are a word class medical physician who is also an expert in Q&A and you will assist in analyzing this patient's medical records

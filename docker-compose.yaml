@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   backend:
-    build: ./src/backend
+    build: ./src/backend  # search for docker file here 
     ports:
       - "8000:8000"
     environment:
@@ -10,12 +10,14 @@ services:
       - MONGODB_URL=mongodb://mongodb:27017
       - REDIS_URL=redis://redis:6379
       - CHROMADB_URL=http://chromadb:8000
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CHROMADB_PATH="/chroma/chroma"
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_REGION=${AWS_REGION}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      # Add any other environment variables your backend needs
     depends_on:
       - postgres
       - mongodb
@@ -23,10 +25,11 @@ services:
       - chromadb
     volumes:
       - ./src/backend:/app
+      - chroma_data:/chroma/chroma
 
   frontend:
     build:
-      context: ./src/frontend
+      context: ./src/frontend  # search for docker file here 
       args:
         - REACT_APP_API_URL=${REACT_APP_API_URL}
     ports:
