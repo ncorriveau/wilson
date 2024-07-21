@@ -6,33 +6,54 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - POSTGRES_URL=postgres://youruser:yourpassword@postgres:5432/yourdbname
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - MONGODB_URL=mongodb://mongodb:27017
       - REDIS_URL=redis://redis:6379
       - CHROMADB_URL=http://chromadb:8000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      # Add any other environment variables your backend needs
     depends_on:
       - postgres
       - mongodb
-      - chromadb
       - redis
+      - chromadb
+    volumes:
+      - ./src/backend:/app
 
   frontend:
-    build: ./src/frontend
+    build:
+      context: ./src/frontend
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL}
     ports:
       - "80:80"
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
 
   postgres:
     image: postgres:13
     environment:
-      POSTGRES_DB: yourdbname
-      POSTGRES_USER: youruser
-      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   mongodb:
     image: mongo:5.0
+    volumes:
+      - mongodb_data:/data/db
 
   chromadb:
-    build: ./chroma_db
+    image: chromadb/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
 
   redis:
     image: redis:6
@@ -40,4 +61,4 @@ services:
 volumes:
   postgres_data:
   mongodb_data:
-  chromadb_data:
+  chroma_data:
