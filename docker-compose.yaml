@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./src/backend
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_URL=postgres://youruser:yourpassword@postgres:5432/yourdbname
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+      - CHROMADB_URL=http://chromadb:8000
+    depends_on:
+      - postgres
+      - mongodb
+      - chromadb
+      - redis
+
+  frontend:
+    build: ./src/frontend
+    ports:
+      - "80:80"
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: yourdbname
+      POSTGRES_USER: youruser
+      POSTGRES_PASSWORD: yourpassword
+
+  mongodb:
+    image: mongo:5.0
+
+  chromadb:
+    build: ./chroma_db
+
+  redis:
+    image: redis:6
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  chromadb_data:
