@@ -11,9 +11,9 @@ from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from pymongo.collection import Collection
 
-from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_relevant_providers
 from ...deps import get_current_user
+from ...models.open_ai.utils import OAIRequest, a_send_rqt
 from ...pydantic_models.pyd_models import FollowUpRqt, TaskSpecialty, specialties
 from ...utils.utils import get_locations
 from .appointments import FollowUps

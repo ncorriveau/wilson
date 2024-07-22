@@ -9,16 +9,7 @@ from uuid import uuid4
 import aioredis
 import boto3
 from dotenv import load_dotenv
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    File,
-    Header,
-    HTTPException,
-    Request,
-    UploadFile,
-)
+from fastapi import APIRouter, BackgroundTasks, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from llama_index.core import SimpleDirectoryReader, download_loader
 from openai import AsyncOpenAI, OpenAI
@@ -26,8 +17,6 @@ from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 
-from ....models.open_ai import prompts as oai_prompts
-from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
 from ...db.relational_db import (
     create_connection,
@@ -37,6 +26,8 @@ from ...db.relational_db import (
 )
 from ...db.vector_db import load_documents
 from ...deps import get_current_user
+from ...models.open_ai import prompts as oai_prompts
+from ...models.open_ai.utils import OAIRequest, a_send_rqt
 from ...pydantic_models.pyd_models import (
     AppointmentMeta,
     ApptRqt,
