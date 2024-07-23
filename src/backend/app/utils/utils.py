@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CONFIG_PATH = "src/backend/app/utils/config.yaml"
+config_path = os.getenv("CONFIG_PATH", "src/backend/app/utils/config.yaml")
 
 
 class Env(Enum):
@@ -31,7 +31,7 @@ def read_config(env: Env) -> Dict[str, Any]:
     """Read the configuration file."""
     if env not in Env:
         raise ValueError(f"Invalid environment: {env}. Expected one of: {list(Env)}")
-    with open(CONFIG_PATH, "r") as config_file:
+    with open(config_path, "r") as config_file:
         config = yaml.safe_load(config_file)
     return config[env.value]
 

@@ -23,7 +23,7 @@ _logger = logging.getLogger(__name__)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-DB_PATH = os.getenv("CHROMADB_PATH", "/chroma/chroma")
+DB_PATH = os.getenv("CHROMADB_PATH", "./chroma_db")
 COLLECTION = "appointment_oai"
 HF_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
 
@@ -135,9 +135,9 @@ if __name__ == "__main__":
 
     client = AsyncOpenAI()
     _logger.info("Loading documents...")
-    context = SimpleDirectoryReader("../data").load_data()
+    context = SimpleDirectoryReader("./data").load_data()
 
-    db = chromadb.PersistentClient(path=DB_PATH)
+    db = chromadb.PersistentClient(path="./chroma_db")
     chroma_collection = db.get_or_create_collection(
         COLLECTION, embedding_function=EMBED_MODEL
     )
