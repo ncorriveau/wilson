@@ -10,7 +10,10 @@ from .api_v1.router import api_router
 
 load_dotenv()
 
-config_path = os.getenv("CONFIG_PATH", "src/backend/app/utils/config.yaml")
+config_path = os.getenv(
+    "LOGGING_CONFIG_PATH", "src/backend/app/utils/logging_config.yaml"
+)
+
 
 with open(config_path, "r") as config_file:
     logging_config = yaml.safe_load(config_file)

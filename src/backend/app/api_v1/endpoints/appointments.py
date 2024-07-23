@@ -46,7 +46,8 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 
 METADATA_PARAMS = [
     "user_id",
@@ -56,11 +57,13 @@ METADATA_PARAMS = [
 ]
 locations = get_locations()
 client = AsyncOpenAI()
-redis = aioredis.from_url(locations["redis"])
-mongo_db_client = MongoClient(locations["mongo_db"])
+redis = aioredis.from_url(REDIS_URL)
+mongo_db_client = MongoClient(MONGODB_URL)
+
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()
+
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=AWS_ACCESS_KEY_ID,

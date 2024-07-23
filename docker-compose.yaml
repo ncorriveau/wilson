@@ -25,6 +25,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - ENV=DEV
       - CONFIG_PATH=/app/app/utils/config.yaml
+      - LOGGING_CONFIG_PATH=/app/app/utils/logging_config.yaml
     depends_on:
       - postgres
       - mongodb
