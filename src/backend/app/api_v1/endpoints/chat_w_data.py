@@ -7,7 +7,6 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
-from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.vector_db import (
     COLLECTION,
     DB_PATH,
@@ -16,6 +15,7 @@ from ...db.vector_db import (
     structure_context,
 )
 from ...deps import get_current_user
+from ...models.open_ai.utils import OAIRequest, a_send_rqt
 
 logger = logging.getLogger(__name__)
 
