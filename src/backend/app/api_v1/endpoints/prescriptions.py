@@ -1,4 +1,5 @@
 import logging
+import os
 from pprint import pprint
 from typing import List
 
@@ -15,9 +16,10 @@ from ...db.relational_db import (
     set_prescription_status,
 )
 from ...pydantic_models.pyd_models import PrescriptionRequest, PrescriptionResponse
-from ...utils.utils import get_locations
 
 logger = logging.getLogger(__name__)
+
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 
 
 def get_prescriptions(
@@ -41,8 +43,7 @@ def get_prescriptions(
 
 # dependencies=[Depends(get_current_user)]
 router = APIRouter()
-locations = get_locations()
-mongo_db_client = MongoClient(locations["mongo_db"])
+mongo_db_client = MongoClient(MONGODB_URL)
 db = mongo_db_client["wilson_ai"]
 conn = create_connection()
 provider_collection = db.providers
@@ -63,7 +64,7 @@ async def set_status(prescription_id: int, rqt: PrescriptionRequest):
 
 
 if __name__ == "__main__":
-    client_db = MongoClient("mongodb://localhost:27017/")
+    client_db = MongoClient(MONGODB_URL)
     db = client_db["wilson_ai"]
     collection = db.providers
     conn = create_connection()

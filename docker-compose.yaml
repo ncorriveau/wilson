@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./src/backend  # search for docker file here 
+    ports:
+      - "8000:8000"
+    environment:
+      # - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - MONGODB_URL=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379
+      - CHROMADB_URL=http://chromadb:8000
+      - CHROMADB_PATH=/chroma/chroma
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - ENV=DEV
+      - CONFIG_PATH=/app/app/utils/config.yaml
+      - LOGGING_CONFIG_PATH=/app/app/utils/logging_config.yaml
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+      - chromadb
+    volumes:
+      - ./src/backend:/app
+      - chroma_data:/chroma/chroma
+
+  frontend:
+    build:
+      context: ./src/frontend  # search for docker file here 
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL}
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql    # initialize db with existing pg data 
+      - postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:5.0
+    volumes:
+      - mongodb_data:/data/db
+
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8080:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  redis:
+    image: redis:6
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  chroma_data:

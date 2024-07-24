@@ -9,16 +9,7 @@ from uuid import uuid4
 import aioredis
 import boto3
 from dotenv import load_dotenv
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    File,
-    Header,
-    HTTPException,
-    Request,
-    UploadFile,
-)
+from fastapi import APIRouter, BackgroundTasks, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from llama_index.core import SimpleDirectoryReader, download_loader
 from openai import AsyncOpenAI, OpenAI
@@ -26,8 +17,6 @@ from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 
-from ....models.open_ai import prompts as oai_prompts
-from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.nosql_db import get_provider_by_npi, get_provider_id, upsert_provider
 from ...db.relational_db import (
     create_connection,
@@ -37,6 +26,8 @@ from ...db.relational_db import (
 )
 from ...db.vector_db import load_documents
 from ...deps import get_current_user
+from ...models.open_ai import prompts as oai_prompts
+from ...models.open_ai.utils import OAIRequest, a_send_rqt
 from ...pydantic_models.pyd_models import (
     AppointmentMeta,
     ApptRqt,
@@ -45,7 +36,7 @@ from ...pydantic_models.pyd_models import (
     Summary,
     specialties,
 )
-from ...utils.utils import create_hash_id, get_locations
+from ...utils.utils import create_hash_id
 
 load_dotenv()
 
@@ -55,7 +46,8 @@ AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 
 METADATA_PARAMS = [
     "user_id",
@@ -63,13 +55,15 @@ METADATA_PARAMS = [
     "filename",
     "appointment_date",
 ]
-locations = get_locations()
+
 client = AsyncOpenAI()
-redis = aioredis.from_url(locations["redis"])
-mongo_db_client = MongoClient(locations["mongo_db"])
+redis = aioredis.from_url(REDIS_URL)
+mongo_db_client = MongoClient(MONGODB_URL)
+
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 conn = create_connection()
+
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -233,6 +227,7 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
     context = loader.load_data()
     text = " ".join([doc.text for doc in context])
 
+    # check if response in redis cache first
     cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
     encoded_info = await get_cached_data(cache_key)
     info = json.loads(encoded_info) if encoded_info else None
@@ -317,7 +312,7 @@ if __name__ == "__main__":
 
     client = AsyncOpenAI()
 
-    context = SimpleDirectoryReader("/Users/nickocorriveau/dev/wilson/data").load_data()
+    context = SimpleDirectoryReader("../data").load_data()
     appt = AppointmentAnalysis(client, context)
 
     logger.info("Starting timer")

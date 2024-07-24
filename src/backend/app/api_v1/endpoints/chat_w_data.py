@@ -2,21 +2,20 @@ import io
 import logging
 
 import chromadb
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
-from ....models.open_ai.utils import OAIRequest, a_send_rqt
 from ...db.vector_db import (
     COLLECTION,
     DB_PATH,
     EMBED_MODEL,
-    build_index,
     get_context,
     structure_context,
 )
 from ...deps import get_current_user
+from ...models.open_ai.utils import OAIRequest, a_send_rqt
 
 logger = logging.getLogger(__name__)
 

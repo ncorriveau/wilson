@@ -15,8 +15,12 @@ from ..security.auth import verify_password
 GOOGE_MAPS_API = "https://maps.googleapis.com/maps/api/geocode/json"
 
 logger = logging.getLogger(__name__)
-password = os.getenv("POSTGRES_PASSWORD")
 api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+pg_user = os.getenv("POSTGRES_USER", "postgres")
+pg_db = os.getenv("POSTGRES_DB", "postgres")
+pg_pw = os.getenv("POSTGRES_PASSWORD")
+pg_port = os.getenv("POSTGRES_PORT", "5432")
+pg_host = os.getenv("POSTGRES_HOST", "localhost")
 
 
 def geocode_address(street, city, state, zip_code):
@@ -246,19 +250,19 @@ CREATE TABLE IF NOT EXISTS specialties (
 """
 
 pg_params = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": password,
-    "host": "localhost",
-    "port": "5432",
+    "dbname": pg_db,
+    "user": pg_user,
+    "password": pg_pw,
+    "host": pg_host,
+    "port": pg_port,
 }
 
 async_pg_params = {
-    "database": "postgres",
-    "user": "postgres",
-    "password": password,
-    "host": "localhost",
-    "port": "5432",
+    "database": pg_db,
+    "user": pg_user,
+    "password": pg_pw,
+    "host": pg_host,
+    "port": pg_port,
 }
 
 
