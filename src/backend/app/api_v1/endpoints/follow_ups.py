@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import sys
+import os
 from pprint import pprint
 from typing import Any, Dict
 
@@ -15,11 +15,11 @@ from ...db.nosql_db import get_relevant_providers
 from ...deps import get_current_user
 from ...models.open_ai.utils import OAIRequest, a_send_rqt
 from ...pydantic_models.pyd_models import FollowUpRqt, TaskSpecialty, specialties
-from ...utils.utils import get_locations
 from .appointments import FollowUps
 
 logger = logging.getLogger(__name__)
 
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 
 SYSTEM_MSG = """
 You are an expert medical assistant and are helping us match physician follow up tasks
@@ -92,9 +92,8 @@ async def get_followup_suggestions(
 
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
-locations = get_locations()
 client = AsyncOpenAI()
-mongo_db_client = MongoClient("mongodb://localhost:27017/")
+mongo_db_client = MongoClient(MONGODB_URL)
 db = mongo_db_client["wilson_ai"]
 provider_collection = db.providers
 
@@ -111,7 +110,7 @@ async def get_follow_ups(followup_rqt: FollowUpRqt):
 
 if __name__ == "__main__":
     client = AsyncOpenAI()
-    client_db = MongoClient("mongodb://localhost:27017/")
+    client_db = MongoClient(MONGODB_URL)
     db = client_db["wilson_ai"]
     collection = db.providers
 

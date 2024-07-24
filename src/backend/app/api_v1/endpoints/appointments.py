@@ -36,7 +36,7 @@ from ...pydantic_models.pyd_models import (
     Summary,
     specialties,
 )
-from ...utils.utils import create_hash_id, get_locations
+from ...utils.utils import create_hash_id
 
 load_dotenv()
 
@@ -55,7 +55,7 @@ METADATA_PARAMS = [
     "filename",
     "appointment_date",
 ]
-locations = get_locations()
+
 client = AsyncOpenAI()
 redis = aioredis.from_url(REDIS_URL)
 mongo_db_client = MongoClient(MONGODB_URL)
