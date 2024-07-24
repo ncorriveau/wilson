@@ -227,6 +227,7 @@ async def analyze_appointment(appt_rqt: ApptRqt, background_tasks: BackgroundTas
     context = loader.load_data()
     text = " ".join([doc.text for doc in context])
 
+    # check if response in redis cache first
     cache_key = create_hash_id(text, {"filename": appt_rqt.data_location})
     encoded_info = await get_cached_data(cache_key)
     info = json.loads(encoded_info) if encoded_info else None
@@ -311,7 +312,7 @@ if __name__ == "__main__":
 
     client = AsyncOpenAI()
 
-    context = SimpleDirectoryReader("/Users/nickocorriveau/dev/wilson/data").load_data()
+    context = SimpleDirectoryReader("../data").load_data()
     appt = AppointmentAnalysis(client, context)
 
     logger.info("Starting timer")
