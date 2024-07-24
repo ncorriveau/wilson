@@ -52,36 +52,22 @@ const App = () => {
             <li>
               <Link to="/prescriptions">Prescriptions 💊 </Link>
             </li>
-            <li>
-              <Link to="/login">Login</Link>
-            </li>
           </ul>
         </nav>
 
         <Routes>
+          <Route path="/" element={token && userId ? <Navigate to="/appointments" /> : <Navigate to="/login" />} />
           {token && userId ? (
             <>
-              <Route
-                path="/appointments"
-                element={<AppointmentManager token={token} userId={userId} />}
-              />
-              <Route
-                path="/chat"
-                element={<ChatApp token={token} userId={userId} />}
-              />
-              <Route
-                path="/prescriptions"
-                element={<Prescriptions token={token} userId={userId} />}
-              />
+              <Route path="/appointments" element={<AppointmentManager token={token} userId={userId} />} />
+              <Route path="/chat" element={<ChatApp token={token} userId={userId} />} />
+              <Route path="/prescriptions" element={<Prescriptions token={token} userId={userId} />} />
             </>
           ) : (
-            <Navigate to="/login" />
+            <Route path="*" element={<Navigate to="/login" />} />
           )}
-          <Route
-            path="/login"
-            element={<LoginPage setToken={handleSetToken} />}
-          />
-        </Routes>
+          <Route path="/login" element={<LoginPage setToken={handleSetToken} />} />
+      </Routes>
       </div>
     </Router>
   );
