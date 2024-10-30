@@ -4,6 +4,10 @@
 
 This repository contains the code for Wilson AI API, a FastAPI / React application where you can intelligently interact with your medical data. 
 
+This is a development project/POC. The application would need a real data source of medical professionals stored in Postgres/MongoDB
+to fully work, but you can input toy examples and see how it is able to correctly recommend 
+Medical practitioners you can follow up with based on your data.
+
 1. **Backend**: A FastAPI application located in the `src/backend` directory.
 2. **Frontend**: A React application located in the `src/frontend` directory.
 
@@ -68,7 +72,8 @@ This repository contains the code for Wilson AI API, a FastAPI / React applicati
     ```
 
 5. **Run the backend server**:
-
+    Ensure that you have the Redis, Postgres, and Mongodb daemons running! 
+    You can then start the FastAPI server with: 
     ```sh
     uvicorn app.main:app --reload
     ```
