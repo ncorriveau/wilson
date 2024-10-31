@@ -4,9 +4,10 @@
 
 This repository contains the code for Wilson AI API, a FastAPI / React application where you can intelligently interact with your medical data. 
 
-This is a development project/POC. The application would need a real data source of medical professionals stored in Postgres/MongoDB
-to fully work, but you can input toy examples and see how it is able to correctly recommend 
-Medical practitioners you can follow up with based on your data.
+This is a development project/POC. You will need to set up the schemas in the postgres instance / and the document collection in MongoDB and 
+fill these with sample values. To simplify this, there is CREATE_QUERIES list in src/backend/app/db/relational_db.py. 
+
+Please reach out if you would like to get examples of potential data to fill in. 
 
 1. **Backend**: A FastAPI application located in the `src/backend` directory.
 2. **Frontend**: A React application located in the `src/frontend` directory.
