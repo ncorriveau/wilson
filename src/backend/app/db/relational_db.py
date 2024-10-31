@@ -547,20 +547,3 @@ def authenticate_user(conn: connection, email: str, password: str) -> Dict[str, 
         return False
 
     return user
-
-
-if __name__ == "__main__":
-    params = {
-        "user_id": 1,
-        "provider_id": "1568424935",
-        "filename": "data",
-        "summary": "The patient has been experiencing a chronic cough for three years, associated with symptoms like throat clearing, intermittent dry cough, recurrent heartburn, postnasal drip, and chest tightness during physical activity. Despite previous treatments including Albuterol, Astelin spray, and Prevacid, the cough has persisted. Current recommendations include using Fluticasone spray, Nexium 40 mg daily for two months, and consultations with Allergy and Gastroenterology specialists.",
-        "appointment_datetime": "2023-09-26 11:30",
-        "follow_ups": '{"tasks": [{"task": "Consult Allergy and GI specialists."}, {"task": "AMB REF to Allergy & Clinical Immunology."}, {"task": "AMB REF to Gastroenterology."}]}',
-        "perscriptions": '{"drugs": [{"technical_name": "esomeprazole", "brand_name": "NEXIUM", "instructions": "Take 1 capsule by mouth every morning before breakfast."}, {"technical_name": "fluticasone propionate", "brand_name": "FLONASE", "instructions": "2 sprays in each nostril once daily."}, {"technical_name": "naproxen", "brand_name": "NAPROSYN", "instructions": "Take 1 tablet by mouth every 12 hours as needed. Stop if GI upset."}, {"technical_name": "azelastine", "brand_name": "ASTELIN", "instructions": "USE NASAL SPRAY AS DIRECTED."}, {"technical_name": "trazodone", "brand_name": "DESYREL", "instructions": "TAKE 1 TO 2 TABLETS BY MOUTH EVERY DAY AT BEDTIME AS NEEDED FOR INSOMNIA."}]}',
-    }
-    conn = create_connection()
-    try:
-        print(set_prescription_status(conn, 1, False))
-    except Exception as e:
-        raise e

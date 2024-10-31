@@ -101,17 +101,6 @@ def structure_context(context: Dict[str, Any]) -> str:
     return "\n".join(df["formatted_row"].to_list())
 
 
-# def build_index(embed_model: Any) -> VectorStoreIndex:
-#     db = chromadb.PersistentClient(path=DB_PATH)
-#     chroma_collection = db.get_or_create_collection(COLLECTION)
-#     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-#     index = VectorStoreIndex.from_vector_store(
-#         vector_store,
-#         embed_model=embed_model,
-#     )
-#     return index
-
-
 def query_documents(query: str, user_id: int, index: VectorStoreIndex) -> Response:
     """query vector db filtering based off user_id in metadata"""
     query_engine = index.as_query_engine(
@@ -141,16 +130,3 @@ if __name__ == "__main__":
     chroma_collection = db.get_or_create_collection(
         COLLECTION, embedding_function=EMBED_MODEL
     )
-    # query = "What diagnosis would explain my symptoms?"
-    # context = get_context(
-    #     query, 1, chroma_collection
-    # )
-    # organized_context = structure_context(context)
-    # rqt = OAIRequest(
-    #     system_msg=CHAT_W_DATA_SYS_MSG,
-    #     user_msg=CHAT_W_DATA_USER_MSG.format(
-    #         query, organized_context
-    #     ),
-    # )
-    # response = asyncio.run(a_send_rqt_chat(client, rqt))
-    # pprint(response)

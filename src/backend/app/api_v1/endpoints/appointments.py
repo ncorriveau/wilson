@@ -11,7 +11,8 @@ import boto3
 from dotenv import load_dotenv
 from fastapi import APIRouter, BackgroundTasks, File, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from llama_index.core import SimpleDirectoryReader, download_loader
+from llama_index.core import SimpleDirectoryReader
+from llama_index.readers.s3 import S3Reader
 from openai import AsyncOpenAI, OpenAI
 from psycopg2.extensions import connection
 from pydantic import BaseModel, Field
@@ -70,7 +71,6 @@ s3_client = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=AWS_REGION,
 )
-S3Reader = download_loader("S3Reader")
 
 
 class AppointmentAnalysis:
