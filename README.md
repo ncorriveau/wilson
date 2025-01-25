@@ -1,8 +1,8 @@
-# Wilson AI API
+# MedTrack AI
 
 ## Overview
 
-This repository contains the code for Wilson AI API, a FastAPI / React application where you can intelligently interact with your medical data. 
+An application enabling users to upload, organize, and analyze medical summaries and medication records, with AI-driven insights for actionable next steps in healthcare. Built with React, TypeScript, FastAPI, Redis, MongoDB, Postgres, and OpenAI API.
 
 This is a development project/POC. You will need to set up the schemas in the postgres instance / and the document collection in MongoDB and 
 fill these with sample values. To simplify this, there is CREATE_QUERIES list in src/backend/app/db/relational_db.py. 
